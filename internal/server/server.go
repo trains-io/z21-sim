@@ -16,11 +16,12 @@ const defaultFirmwareVersion uint32 = 0x00000120 // BCD 1.20
 
 // Server implements a minimal Z21 LAN UDP API.
 type Server struct {
-	conn    *net.UDPConn
-	log     *slog.Logger
-	serial  uint32
-	mu      sync.Mutex
-	clients map[string]*clientSession
+	conn       *net.UDPConn
+	log        *slog.Logger
+	serial     uint32
+	trackPower bool
+	mu         sync.Mutex
+	clients    map[string]*clientSession
 }
 
 type clientSession struct {
@@ -45,10 +46,11 @@ func New(addr string, log *slog.Logger) (*Server, error) {
 	}
 
 	return &Server{
-		conn:    conn,
-		log:     log,
-		serial:  makeSimulatorSerialNumber(time.Now()),
-		clients: make(map[string]*clientSession),
+		conn:       conn,
+		log:        log,
+		serial:     makeSimulatorSerialNumber(time.Now()),
+		trackPower: true,
+		clients:    make(map[string]*clientSession),
 	}, nil
 }
 
@@ -119,6 +121,10 @@ func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
 			if len(msg.Data) >= 4 {
 				session.broadcastFlags = binary.LittleEndian.Uint32(msg.Data)
 			}
+		case protocol.HeaderLANGetBroadcastFlags:
+			replies = append(replies, s.broadcastFlagsReply(session.broadcastFlags))
+		case protocol.HeaderLANSystemStateGetData:
+			replies = append(replies, s.systemStateReply())
 		default:
 			s.log.Debug("unhandled request", "from", remote, "header", protocol.HeaderName(msg.Header))
 		}
@@ -127,8 +133,11 @@ func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
 	if len(replies) == 0 {
 		return
 	}
+	s.writeMessages(remote, replies)
+}
 
-	out, err := protocol.MarshalAll(replies...)
+func (s *Server) writeMessages(remote *net.UDPAddr, msgs []protocol.Message) {
+	out, err := protocol.MarshalAll(msgs...)
 	if err != nil {
 		s.log.Error("marshal reply", "err", err)
 		return
@@ -146,12 +155,19 @@ func (s *Server) sessionFor(remote *net.UDPAddr) *clientSession {
 	defer s.mu.Unlock()
 
 	if c, ok := s.clients[key]; ok {
+		c.addr = remote
 		return c
 	}
 
 	c := &clientSession{addr: remote}
 	s.clients[key] = c
 	return c
+}
+
+func (s *Server) clientCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.clients)
 }
 
 func (s *Server) removeClient(remote *net.UDPAddr) {

@@ -114,3 +114,97 @@ func TestGetCode(t *testing.T) {
 		t.Fatalf("code = %#x, want %#x", code, protocol.CodeNoLock)
 	}
 }
+
+func TestGetBroadcastFlags(t *testing.T) {
+	addr, _ := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	const flags uint32 = 0x103
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(flags)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+
+	msgs, err := c.Call(ctx, protocol.GetBroadcastFlags())
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	got, err := protocol.BroadcastFlagsFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("BroadcastFlagsFromMessages: %v", err)
+	}
+	if got != flags {
+		t.Fatalf("flags = %#x, want %#x", got, flags)
+	}
+}
+
+func TestSystemStateGetData(t *testing.T) {
+	addr, _ := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	msgs, err := c.Call(ctx, protocol.SystemStateGetData())
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	state, err := protocol.SystemStateFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("SystemStateFromMessages: %v", err)
+	}
+	if got := protocol.FormatXStatusFlags(state.CentralState); got != "ok" {
+		t.Fatalf("CentralState = %q, want ok", got)
+	}
+	if len(msgs[0].Data) < 16 {
+		t.Fatalf("system state payload len = %d, want >= 16", len(msgs[0].Data))
+	}
+}
+
+func TestLogoffClearsClientSession(t *testing.T) {
+	addr, _ := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	const flags uint32 = 0x103
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(flags)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if err := c.Send(ctx, protocol.Logoff()); err != nil {
+		t.Fatalf("Logoff: %v", err)
+	}
+
+	msgs, err := c.Call(ctx, protocol.GetBroadcastFlags())
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	got, err := protocol.BroadcastFlagsFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("BroadcastFlagsFromMessages: %v", err)
+	}
+	if got != 0 {
+		t.Fatalf("flags after logoff = %#x, want 0", got)
+	}
+}
