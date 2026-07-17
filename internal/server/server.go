@@ -1,0 +1,161 @@
+package server
+
+import (
+	"context"
+	"encoding/binary"
+	"fmt"
+	"log/slog"
+	"net"
+	"sync"
+
+	"github.com/trains-io/z21.go/protocol"
+)
+
+const defaultFirmwareVersion uint32 = 0x00000120 // BCD 1.20
+
+// Server implements a minimal Z21 LAN UDP API.
+type Server struct {
+	conn   *net.UDPConn
+	log    *slog.Logger
+	mu     sync.Mutex
+	clients map[string]*clientSession
+}
+
+type clientSession struct {
+	addr           *net.UDPAddr
+	broadcastFlags uint32
+}
+
+// New binds a UDP listener on addr (for example "0.0.0.0:21105" or "127.0.0.1:0").
+func New(addr string, log *slog.Logger) (*Server, error) {
+	if log == nil {
+		log = slog.Default()
+	}
+
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("z21-sim: resolve addr: %w", err)
+	}
+
+	conn, err := net.ListenUDP("udp", udpAddr)
+	if err != nil {
+		return nil, fmt.Errorf("z21-sim: listen: %w", err)
+	}
+
+	return &Server{
+		conn:    conn,
+		log:     log,
+		clients: make(map[string]*clientSession),
+	}, nil
+}
+
+// Addr returns the bound local UDP address.
+func (s *Server) Addr() net.Addr {
+	if s == nil || s.conn == nil {
+		return nil
+	}
+	return s.conn.LocalAddr()
+}
+
+// Close releases the UDP socket.
+func (s *Server) Close() error {
+	if s == nil || s.conn == nil {
+		return nil
+	}
+	return s.conn.Close()
+}
+
+// Serve handles incoming datagrams until ctx is cancelled.
+func (s *Server) Serve(ctx context.Context) error {
+	if s == nil || s.conn == nil {
+		return fmt.Errorf("z21-sim: not listening")
+	}
+
+	buf := make([]byte, 4096)
+	for {
+		if err := s.conn.SetReadDeadline(readDeadline(ctx)); err != nil {
+			return fmt.Errorf("z21-sim: set read deadline: %w", err)
+		}
+
+		n, remote, err := s.conn.ReadFromUDP(buf)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				continue
+			}
+			return fmt.Errorf("z21-sim: read: %w", err)
+		}
+
+		s.handlePacket(remote, buf[:n])
+	}
+}
+
+func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
+	msgs, err := protocol.ParseAll(payload)
+	if err != nil {
+		s.log.Debug("ignore malformed packet", "from", remote, "err", err)
+		return
+	}
+
+	session := s.sessionFor(remote)
+	var replies []protocol.Message
+
+	for _, msg := range msgs {
+		switch msg.Header {
+		case protocol.HeaderLANGetHWInfo:
+			replies = append(replies, s.hwInfoReply())
+		case protocol.HeaderLANLogoff:
+			s.removeClient(remote)
+		case protocol.HeaderLANSetBroadcastFlags:
+			if len(msg.Data) >= 4 {
+				session.broadcastFlags = binary.LittleEndian.Uint32(msg.Data)
+			}
+		default:
+			s.log.Debug("unhandled request", "from", remote, "header", protocol.HeaderName(msg.Header))
+		}
+	}
+
+	if len(replies) == 0 {
+		return
+	}
+
+	out, err := protocol.MarshalAll(replies...)
+	if err != nil {
+		s.log.Error("marshal reply", "err", err)
+		return
+	}
+
+	if _, err := s.conn.WriteToUDP(out, remote); err != nil {
+		s.log.Error("write reply", "to", remote, "err", err)
+	}
+}
+
+func (s *Server) sessionFor(remote *net.UDPAddr) *clientSession {
+	key := remote.String()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if c, ok := s.clients[key]; ok {
+		return c
+	}
+
+	c := &clientSession{addr: remote}
+	s.clients[key] = c
+	return c
+}
+
+func (s *Server) removeClient(remote *net.UDPAddr) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.clients, remote.String())
+}
+
+func (s *Server) hwInfoReply() protocol.Message {
+	data := make([]byte, 8)
+	binary.LittleEndian.PutUint32(data[0:4], protocol.HwTypeZ21New)
+	binary.LittleEndian.PutUint32(data[4:8], defaultFirmwareVersion)
+	return protocol.Message{Header: protocol.HeaderLANGetHWInfo, Data: data}
+}
