@@ -25,6 +25,9 @@ build: ## Compile binary to bin/
 run: build ## Run the simulator locally
 	$(BIN) -addr $(ADDR) -grpc-addr $(GRPC_ADDR)
 
+run-trace: build ## Run with LAN and gRPC trace dumps on stderr
+	$(BIN) -addr $(ADDR) -grpc-addr $(GRPC_ADDR) -trace
+
 test: ## Run unit tests
 	go test ./... -count=1
 

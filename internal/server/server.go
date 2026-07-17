@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/trains-io/z21-sim-go/internal/trace"
 	"github.com/trains-io/z21.go/protocol"
 )
 
@@ -18,6 +19,7 @@ const defaultFirmwareVersion uint32 = 0x00000120 // BCD 1.20
 type Server struct {
 	conn       *net.UDPConn
 	log        *slog.Logger
+	tracer     *trace.Tracer
 	serial     uint32
 	trackPower bool
 	mu         sync.Mutex
@@ -31,7 +33,7 @@ type clientSession struct {
 }
 
 // New binds a UDP listener on addr (for example "0.0.0.0:21105" or "127.0.0.1:0").
-func New(addr string, log *slog.Logger) (*Server, error) {
+func New(addr string, log *slog.Logger, opts ...Option) (*Server, error) {
 	if log == nil {
 		log = slog.Default()
 	}
@@ -46,14 +48,24 @@ func New(addr string, log *slog.Logger) (*Server, error) {
 		return nil, fmt.Errorf("z21-sim: listen: %w", err)
 	}
 
-	return &Server{
+	s := &Server{
 		conn:       conn,
 		log:        log,
 		serial:     makeSimulatorSerialNumber(time.Now()),
 		trackPower: true,
 		clients:    make(map[string]*clientSession),
 		canDevices: make(map[uint16]CANDevice),
-	}, nil
+	}
+	applyOptions(s, opts)
+	return s, nil
+}
+
+func applyOptions(s *Server, opts []Option) {
+	for _, opt := range opts {
+		if opt != nil {
+			opt(s)
+		}
+	}
 }
 
 // Addr returns the bound local UDP address.
@@ -100,6 +112,10 @@ func (s *Server) Serve(ctx context.Context) error {
 }
 
 func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
+	if s.tracer != nil {
+		s.tracer.LogLAN(trace.DirectionRX, remote.String(), payload)
+	}
+
 	msgs, err := protocol.ParseAll(payload)
 	if err != nil {
 		s.log.Debug("ignore malformed packet", "from", remote, "err", err)
@@ -164,9 +180,19 @@ func (s *Server) writeMessages(remote *net.UDPAddr, msgs []protocol.Message) {
 		return
 	}
 
-	if _, err := s.conn.WriteToUDP(out, remote); err != nil {
-		s.log.Error("write reply", "to", remote, "err", err)
+	if s.tracer != nil {
+		s.tracer.LogLAN(trace.DirectionTX, remote.String(), out)
 	}
+
+	s.sendUDP(remote, out)
+}
+
+func (s *Server) sendUDP(remote *net.UDPAddr, out []byte) bool {
+	if _, err := s.conn.WriteToUDP(out, remote); err != nil {
+		s.log.Error("write udp", "to", remote, "err", err)
+		return false
+	}
+	return true
 }
 
 func (s *Server) sessionFor(remote *net.UDPAddr) *clientSession {

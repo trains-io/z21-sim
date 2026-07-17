@@ -8,6 +8,7 @@ import (
 
 	controlv1 "github.com/trains-io/z21-sim-go/api/control/v1"
 	"github.com/trains-io/z21-sim-go/internal/server"
+	"github.com/trains-io/z21-sim-go/internal/trace"
 	"google.golang.org/grpc"
 )
 
@@ -15,14 +16,15 @@ import (
 type GRPCServer struct {
 	controlv1.UnimplementedSimulatorServiceServer
 
-	sim *server.Server
-	log *slog.Logger
-	srv *grpc.Server
-	lis net.Listener
+	sim    *server.Server
+	log    *slog.Logger
+	tracer *trace.Tracer
+	srv    *grpc.Server
+	lis    net.Listener
 }
 
 // NewGRPCServer listens on addr and serves the control API for sim.
-func NewGRPCServer(sim *server.Server, addr string, log *slog.Logger) (*GRPCServer, error) {
+func NewGRPCServer(sim *server.Server, addr string, log *slog.Logger, opts ...Option) (*GRPCServer, error) {
 	if sim == nil {
 		return nil, fmt.Errorf("control: nil simulator")
 	}
@@ -35,10 +37,25 @@ func NewGRPCServer(sim *server.Server, addr string, log *slog.Logger) (*GRPCServ
 		return nil, fmt.Errorf("control: listen %s: %w", addr, err)
 	}
 
-	srv := grpc.NewServer()
-	g := &GRPCServer{sim: sim, log: log, srv: srv, lis: lis}
+	g := &GRPCServer{sim: sim, log: log, lis: lis}
+	applyOptions(g, opts)
+
+	var serverOpts []grpc.ServerOption
+	if g.tracer != nil {
+		serverOpts = append(serverOpts, grpc.UnaryInterceptor(grpcTraceInterceptor(g.tracer)))
+	}
+	srv := grpc.NewServer(serverOpts...)
+	g.srv = srv
 	controlv1.RegisterSimulatorServiceServer(srv, g)
 	return g, nil
+}
+
+func applyOptions(g *GRPCServer, opts []Option) {
+	for _, opt := range opts {
+		if opt != nil {
+			opt(g)
+		}
+	}
 }
 
 // Addr returns the bound TCP address.

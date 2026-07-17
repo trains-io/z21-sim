@@ -47,13 +47,33 @@ func (s *Server) broadcastMany(msgs []protocol.Message, flag uint32, except *net
 		return 0
 	}
 
-	sent := 0
+	out, err := protocol.MarshalAll(msgs...)
+	if err != nil {
+		s.log.Error("marshal broadcast", "err", err)
+		return 0
+	}
+
+	var recipients []*net.UDPAddr
 	for _, addr := range s.subscriberAddrs(flag) {
 		if except != nil && addr.String() == except.String() {
 			continue
 		}
-		s.writeMessages(addr, msgs)
-		sent++
+		recipients = append(recipients, addr)
+	}
+
+	if s.tracer != nil {
+		names := make([]string, len(recipients))
+		for i, addr := range recipients {
+			names[i] = addr.String()
+		}
+		s.tracer.LogLANBroadcast(flag, names, out)
+	}
+
+	sent := 0
+	for _, addr := range recipients {
+		if s.sendUDP(addr, out) {
+			sent++
+		}
 	}
 	return sent
 }
