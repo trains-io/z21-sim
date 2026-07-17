@@ -1,42 +1,78 @@
-## z21-sim-go
+# z21-sim-go
 
 Go implementation of a [Z21 LAN protocol](https://www.z21.eu) test server, intended to replace [z21-sim](https://github.com/trains-io/z21-sim) with feature parity and room to grow.
 
 The simulator listens on UDP port **21105** (same as a physical Z21). It reuses wire-format types from [z21.go](https://github.com/trains-io/z21.go).
 
-A future **gRPC control plane** will let a sidecar (`z21-sim-controller`) inject unsolicited broadcast events (for example from a Custom Resource in Kubernetes) without sending Z21 UDP directly to gateway clients.
+A **gRPC control plane** on port **50051** lets a sidecar (`z21-sim-controller`) inject unsolicited broadcast events (for example from a Custom Resource in Kubernetes) without sending Z21 UDP directly to gateway clients.
 
-### Prerequisites
+## Prerequisites
 
 - Go 1.24+
+- Docker (for integration tests and container usage)
 
-### Quick start
+## Quick start
+
+### Local binary
 
 ```bash
 make run
 ```
 
-In another terminal, probe with z21cli or any Z21 LAN client on `127.0.0.1:21105`.
-
-### Development
+### Docker
 
 ```bash
-make test    # unit tests
-make build   # compile binary to bin/
+make docker-build
+make docker-run
 ```
 
-### Roadmap
+Stop the container:
 
-Incremental milestones (each intended as a small commit):
+```bash
+make docker-stop
+```
 
-1. **Scaffold** — module layout, UDP listener, `LAN_GET_HWINFO`
-2. **Identity** — `LAN_GET_SERIAL_NUMBER` (999-prefix sim serial), `LAN_GET_CODE`
-3. **System state** — `LAN_SYSTEMSTATE_GETDATA`, broadcast flags, client registry
-4. **XpressNet** — `LAN_X_GET_FIRMWARE_VERSION`, `LAN_X_GET_STATUS`, track power
-5. **Broadcasts** — unsolicited `LAN_SYSTEMSTATE_DATACHANGED` to subscribed clients
-6. **gRPC control** — proto + service for sidecar-triggered events
-7. **Container** — Dockerfile, CI, drop-in for z21.go integration tests
+## Development
 
-### License
+```bash
+make test              # unit tests
+make test-integration  # build image + run integration tests
+make build             # compile binary to bin/
+make proto             # regenerate gRPC stubs
+```
+
+## Drop-in for z21.go integration tests
+
+[z21.go](https://github.com/trains-io/z21.go) integration tests accept a simulator image via `Z21_TESTSERVER_IMAGE`:
+
+```bash
+# From z21.go repository
+export Z21_TESTSERVER_IMAGE=ghcr.io/trains-io/z21-sim-go:latest
+make test-integration
+```
+
+Or build locally from a sibling checkout:
+
+```bash
+export Z21_TESTSERVER_IMAGE=z21-sim-go:local
+make -C ../z21-sim-go docker-build TAG=local
+make test-integration
+```
+
+Alternatively, point at a Dockerfile context:
+
+```bash
+export Z21_TESTSERVER_DOCKERFILE=/path/to/z21-sim-go
+go test -tags=integration ./client/... -count=1 -timeout=10m
+```
+
+## Container ports
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 21105 | UDP | Z21 LAN API |
+| 50051 | TCP | gRPC control plane (localhost sidecar in pod) |
+
+## License
 
 [MIT](LICENSE)
