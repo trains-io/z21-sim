@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/trains-io/z21.go/protocol"
 )
@@ -15,9 +16,10 @@ const defaultFirmwareVersion uint32 = 0x00000120 // BCD 1.20
 
 // Server implements a minimal Z21 LAN UDP API.
 type Server struct {
-	conn   *net.UDPConn
-	log    *slog.Logger
-	mu     sync.Mutex
+	conn    *net.UDPConn
+	log     *slog.Logger
+	serial  uint32
+	mu      sync.Mutex
 	clients map[string]*clientSession
 }
 
@@ -45,6 +47,7 @@ func New(addr string, log *slog.Logger) (*Server, error) {
 	return &Server{
 		conn:    conn,
 		log:     log,
+		serial:  makeSimulatorSerialNumber(time.Now()),
 		clients: make(map[string]*clientSession),
 	}, nil
 }
@@ -106,6 +109,10 @@ func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
 		switch msg.Header {
 		case protocol.HeaderLANGetHWInfo:
 			replies = append(replies, s.hwInfoReply())
+		case protocol.HeaderLANGetSerialNumber:
+			replies = append(replies, s.serialReply())
+		case protocol.HeaderLANGetCode:
+			replies = append(replies, s.codeReply())
 		case protocol.HeaderLANLogoff:
 			s.removeClient(remote)
 		case protocol.HeaderLANSetBroadcastFlags:
