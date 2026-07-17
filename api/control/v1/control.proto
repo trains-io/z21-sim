@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package trains.io.z21sim.control.v1;
+
+option go_package = "github.com/trains-io/z21-sim-go/api/control/v1;controlv1";
+
+// SimulatorService is the gRPC control plane for z21-sim-go.
+// A sidecar (z21-sim-controller) uses it to inject unsolicited Z21 LAN events.
+service SimulatorService {
+  // BroadcastSystemState emits LAN_SYSTEMSTATE_DATACHANGED to subscribed clients.
+  rpc BroadcastSystemState(BroadcastSystemStateRequest) returns (BroadcastSystemStateResponse);
+
+  // SetTrackPower updates simulator track power and emits unsolicited XpressNet
+  // and system-state broadcasts to subscribed clients.
+  rpc SetTrackPower(SetTrackPowerRequest) returns (SetTrackPowerResponse);
+}
+
+message BroadcastSystemStateRequest {}
+
+message BroadcastSystemStateResponse {
+  int32 recipient_count = 1;
+}
+
+message SetTrackPowerRequest {
+  bool on = 1;
+}
+
+message SetTrackPowerResponse {
+  bool on = 1;
+  bool changed = 2;
+}
