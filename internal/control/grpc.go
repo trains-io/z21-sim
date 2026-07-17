@@ -81,3 +81,40 @@ func (g *GRPCServer) SetTrackPower(_ context.Context, req *controlv1.SetTrackPow
 		Changed: changed,
 	}, nil
 }
+
+func (g *GRPCServer) NotifyCANDeviceDetected(_ context.Context, req *controlv1.NotifyCANDeviceDetectedRequest) (*controlv1.NotifyCANDeviceDetectedResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("control: nil request")
+	}
+
+	kind, err := canDeviceKindFromProto(req.GetKind())
+	if err != nil {
+		return nil, err
+	}
+
+	device, err := server.BuildCANDevice(
+		req.GetNetId(),
+		kind,
+		req.GetName(),
+		req.GetModuleAddr(),
+		req.GetPortCount(),
+		req.GetOutputPort(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	count := g.sim.NotifyCANDeviceDetected(device)
+	return &controlv1.NotifyCANDeviceDetectedResponse{RecipientCount: int32(count)}, nil
+}
+
+func canDeviceKindFromProto(kind controlv1.CANDeviceKind) (server.CANDeviceKind, error) {
+	switch kind {
+	case controlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR:
+		return server.CANDeviceDetector, nil
+	case controlv1.CANDeviceKind_CAN_DEVICE_KIND_BOOSTER:
+		return server.CANDeviceBooster, nil
+	default:
+		return 0, fmt.Errorf("control: kind is required")
+	}
+}

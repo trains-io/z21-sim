@@ -21,6 +21,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CANDeviceKind int32
+
+const (
+	CANDeviceKind_CAN_DEVICE_KIND_UNSPECIFIED CANDeviceKind = 0
+	CANDeviceKind_CAN_DEVICE_KIND_DETECTOR    CANDeviceKind = 1
+	CANDeviceKind_CAN_DEVICE_KIND_BOOSTER     CANDeviceKind = 2
+)
+
+// Enum value maps for CANDeviceKind.
+var (
+	CANDeviceKind_name = map[int32]string{
+		0: "CAN_DEVICE_KIND_UNSPECIFIED",
+		1: "CAN_DEVICE_KIND_DETECTOR",
+		2: "CAN_DEVICE_KIND_BOOSTER",
+	}
+	CANDeviceKind_value = map[string]int32{
+		"CAN_DEVICE_KIND_UNSPECIFIED": 0,
+		"CAN_DEVICE_KIND_DETECTOR":    1,
+		"CAN_DEVICE_KIND_BOOSTER":     2,
+	}
+)
+
+func (x CANDeviceKind) Enum() *CANDeviceKind {
+	p := new(CANDeviceKind)
+	*p = x
+	return p
+}
+
+func (x CANDeviceKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CANDeviceKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_control_v1_control_proto_enumTypes[0].Descriptor()
+}
+
+func (CANDeviceKind) Type() protoreflect.EnumType {
+	return &file_api_control_v1_control_proto_enumTypes[0]
+}
+
+func (x CANDeviceKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CANDeviceKind.Descriptor instead.
+func (CANDeviceKind) EnumDescriptor() ([]byte, []int) {
+	return file_api_control_v1_control_proto_rawDescGZIP(), []int{0}
+}
+
 type BroadcastSystemStateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -197,6 +246,134 @@ func (x *SetTrackPowerResponse) GetChanged() bool {
 	return false
 }
 
+type NotifyCANDeviceDetectedRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NetId         uint32                 `protobuf:"varint,1,opt,name=net_id,json=netId,proto3" json:"net_id,omitempty"`
+	Kind          CANDeviceKind          `protobuf:"varint,2,opt,name=kind,proto3,enum=trains.io.z21sim.control.v1.CANDeviceKind" json:"kind,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	ModuleAddr    uint32                 `protobuf:"varint,4,opt,name=module_addr,json=moduleAddr,proto3" json:"module_addr,omitempty"` // detector: 1-based module address (default 1)
+	PortCount     uint32                 `protobuf:"varint,5,opt,name=port_count,json=portCount,proto3" json:"port_count,omitempty"`    // detector: number of feedback ports (default 1)
+	OutputPort    uint32                 `protobuf:"varint,6,opt,name=output_port,json=outputPort,proto3" json:"output_port,omitempty"` // booster: output port index (default 1)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NotifyCANDeviceDetectedRequest) Reset() {
+	*x = NotifyCANDeviceDetectedRequest{}
+	mi := &file_api_control_v1_control_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NotifyCANDeviceDetectedRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NotifyCANDeviceDetectedRequest) ProtoMessage() {}
+
+func (x *NotifyCANDeviceDetectedRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_control_v1_control_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NotifyCANDeviceDetectedRequest.ProtoReflect.Descriptor instead.
+func (*NotifyCANDeviceDetectedRequest) Descriptor() ([]byte, []int) {
+	return file_api_control_v1_control_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *NotifyCANDeviceDetectedRequest) GetNetId() uint32 {
+	if x != nil {
+		return x.NetId
+	}
+	return 0
+}
+
+func (x *NotifyCANDeviceDetectedRequest) GetKind() CANDeviceKind {
+	if x != nil {
+		return x.Kind
+	}
+	return CANDeviceKind_CAN_DEVICE_KIND_UNSPECIFIED
+}
+
+func (x *NotifyCANDeviceDetectedRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *NotifyCANDeviceDetectedRequest) GetModuleAddr() uint32 {
+	if x != nil {
+		return x.ModuleAddr
+	}
+	return 0
+}
+
+func (x *NotifyCANDeviceDetectedRequest) GetPortCount() uint32 {
+	if x != nil {
+		return x.PortCount
+	}
+	return 0
+}
+
+func (x *NotifyCANDeviceDetectedRequest) GetOutputPort() uint32 {
+	if x != nil {
+		return x.OutputPort
+	}
+	return 0
+}
+
+type NotifyCANDeviceDetectedResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	RecipientCount int32                  `protobuf:"varint,1,opt,name=recipient_count,json=recipientCount,proto3" json:"recipient_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *NotifyCANDeviceDetectedResponse) Reset() {
+	*x = NotifyCANDeviceDetectedResponse{}
+	mi := &file_api_control_v1_control_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NotifyCANDeviceDetectedResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NotifyCANDeviceDetectedResponse) ProtoMessage() {}
+
+func (x *NotifyCANDeviceDetectedResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_control_v1_control_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NotifyCANDeviceDetectedResponse.ProtoReflect.Descriptor instead.
+func (*NotifyCANDeviceDetectedResponse) Descriptor() ([]byte, []int) {
+	return file_api_control_v1_control_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *NotifyCANDeviceDetectedResponse) GetRecipientCount() int32 {
+	if x != nil {
+		return x.RecipientCount
+	}
+	return 0
+}
+
 var File_api_control_v1_control_proto protoreflect.FileDescriptor
 
 const file_api_control_v1_control_proto_rawDesc = "" +
@@ -209,10 +386,27 @@ const file_api_control_v1_control_proto_rawDesc = "" +
 	"\x02on\x18\x01 \x01(\bR\x02on\"A\n" +
 	"\x15SetTrackPowerResponse\x12\x0e\n" +
 	"\x02on\x18\x01 \x01(\bR\x02on\x12\x18\n" +
-	"\achanged\x18\x02 \x01(\bR\achanged2\x98\x02\n" +
+	"\achanged\x18\x02 \x01(\bR\achanged\"\xec\x01\n" +
+	"\x1eNotifyCANDeviceDetectedRequest\x12\x15\n" +
+	"\x06net_id\x18\x01 \x01(\rR\x05netId\x12>\n" +
+	"\x04kind\x18\x02 \x01(\x0e2*.trains.io.z21sim.control.v1.CANDeviceKindR\x04kind\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n" +
+	"\vmodule_addr\x18\x04 \x01(\rR\n" +
+	"moduleAddr\x12\x1d\n" +
+	"\n" +
+	"port_count\x18\x05 \x01(\rR\tportCount\x12\x1f\n" +
+	"\voutput_port\x18\x06 \x01(\rR\n" +
+	"outputPort\"J\n" +
+	"\x1fNotifyCANDeviceDetectedResponse\x12'\n" +
+	"\x0frecipient_count\x18\x01 \x01(\x05R\x0erecipientCount*k\n" +
+	"\rCANDeviceKind\x12\x1f\n" +
+	"\x1bCAN_DEVICE_KIND_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18CAN_DEVICE_KIND_DETECTOR\x10\x01\x12\x1b\n" +
+	"\x17CAN_DEVICE_KIND_BOOSTER\x10\x022\xaf\x03\n" +
 	"\x10SimulatorService\x12\x8b\x01\n" +
 	"\x14BroadcastSystemState\x128.trains.io.z21sim.control.v1.BroadcastSystemStateRequest\x1a9.trains.io.z21sim.control.v1.BroadcastSystemStateResponse\x12v\n" +
-	"\rSetTrackPower\x121.trains.io.z21sim.control.v1.SetTrackPowerRequest\x1a2.trains.io.z21sim.control.v1.SetTrackPowerResponseB:Z8github.com/trains-io/z21-sim-go/api/control/v1;controlv1b\x06proto3"
+	"\rSetTrackPower\x121.trains.io.z21sim.control.v1.SetTrackPowerRequest\x1a2.trains.io.z21sim.control.v1.SetTrackPowerResponse\x12\x94\x01\n" +
+	"\x17NotifyCANDeviceDetected\x12;.trains.io.z21sim.control.v1.NotifyCANDeviceDetectedRequest\x1a<.trains.io.z21sim.control.v1.NotifyCANDeviceDetectedResponseB:Z8github.com/trains-io/z21-sim-go/api/control/v1;controlv1b\x06proto3"
 
 var (
 	file_api_control_v1_control_proto_rawDescOnce sync.Once
@@ -226,23 +420,30 @@ func file_api_control_v1_control_proto_rawDescGZIP() []byte {
 	return file_api_control_v1_control_proto_rawDescData
 }
 
-var file_api_control_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_api_control_v1_control_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_api_control_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_api_control_v1_control_proto_goTypes = []any{
-	(*BroadcastSystemStateRequest)(nil),  // 0: trains.io.z21sim.control.v1.BroadcastSystemStateRequest
-	(*BroadcastSystemStateResponse)(nil), // 1: trains.io.z21sim.control.v1.BroadcastSystemStateResponse
-	(*SetTrackPowerRequest)(nil),         // 2: trains.io.z21sim.control.v1.SetTrackPowerRequest
-	(*SetTrackPowerResponse)(nil),        // 3: trains.io.z21sim.control.v1.SetTrackPowerResponse
+	(CANDeviceKind)(0),                      // 0: trains.io.z21sim.control.v1.CANDeviceKind
+	(*BroadcastSystemStateRequest)(nil),     // 1: trains.io.z21sim.control.v1.BroadcastSystemStateRequest
+	(*BroadcastSystemStateResponse)(nil),    // 2: trains.io.z21sim.control.v1.BroadcastSystemStateResponse
+	(*SetTrackPowerRequest)(nil),            // 3: trains.io.z21sim.control.v1.SetTrackPowerRequest
+	(*SetTrackPowerResponse)(nil),           // 4: trains.io.z21sim.control.v1.SetTrackPowerResponse
+	(*NotifyCANDeviceDetectedRequest)(nil),  // 5: trains.io.z21sim.control.v1.NotifyCANDeviceDetectedRequest
+	(*NotifyCANDeviceDetectedResponse)(nil), // 6: trains.io.z21sim.control.v1.NotifyCANDeviceDetectedResponse
 }
 var file_api_control_v1_control_proto_depIdxs = []int32{
-	0, // 0: trains.io.z21sim.control.v1.SimulatorService.BroadcastSystemState:input_type -> trains.io.z21sim.control.v1.BroadcastSystemStateRequest
-	2, // 1: trains.io.z21sim.control.v1.SimulatorService.SetTrackPower:input_type -> trains.io.z21sim.control.v1.SetTrackPowerRequest
-	1, // 2: trains.io.z21sim.control.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21sim.control.v1.BroadcastSystemStateResponse
-	3, // 3: trains.io.z21sim.control.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21sim.control.v1.SetTrackPowerResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: trains.io.z21sim.control.v1.NotifyCANDeviceDetectedRequest.kind:type_name -> trains.io.z21sim.control.v1.CANDeviceKind
+	1, // 1: trains.io.z21sim.control.v1.SimulatorService.BroadcastSystemState:input_type -> trains.io.z21sim.control.v1.BroadcastSystemStateRequest
+	3, // 2: trains.io.z21sim.control.v1.SimulatorService.SetTrackPower:input_type -> trains.io.z21sim.control.v1.SetTrackPowerRequest
+	5, // 3: trains.io.z21sim.control.v1.SimulatorService.NotifyCANDeviceDetected:input_type -> trains.io.z21sim.control.v1.NotifyCANDeviceDetectedRequest
+	2, // 4: trains.io.z21sim.control.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21sim.control.v1.BroadcastSystemStateResponse
+	4, // 5: trains.io.z21sim.control.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21sim.control.v1.SetTrackPowerResponse
+	6, // 6: trains.io.z21sim.control.v1.SimulatorService.NotifyCANDeviceDetected:output_type -> trains.io.z21sim.control.v1.NotifyCANDeviceDetectedResponse
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_api_control_v1_control_proto_init() }
@@ -255,13 +456,14 @@ func file_api_control_v1_control_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_control_v1_control_proto_rawDesc), len(file_api_control_v1_control_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   4,
+			NumEnums:      1,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_api_control_v1_control_proto_goTypes,
 		DependencyIndexes: file_api_control_v1_control_proto_depIdxs,
+		EnumInfos:         file_api_control_v1_control_proto_enumTypes,
 		MessageInfos:      file_api_control_v1_control_proto_msgTypes,
 	}.Build()
 	File_api_control_v1_control_proto = out.File

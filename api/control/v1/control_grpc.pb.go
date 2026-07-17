@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SimulatorService_BroadcastSystemState_FullMethodName = "/trains.io.z21sim.control.v1.SimulatorService/BroadcastSystemState"
-	SimulatorService_SetTrackPower_FullMethodName        = "/trains.io.z21sim.control.v1.SimulatorService/SetTrackPower"
+	SimulatorService_BroadcastSystemState_FullMethodName    = "/trains.io.z21sim.control.v1.SimulatorService/BroadcastSystemState"
+	SimulatorService_SetTrackPower_FullMethodName           = "/trains.io.z21sim.control.v1.SimulatorService/SetTrackPower"
+	SimulatorService_NotifyCANDeviceDetected_FullMethodName = "/trains.io.z21sim.control.v1.SimulatorService/NotifyCANDeviceDetected"
 )
 
 // SimulatorServiceClient is the client API for SimulatorService service.
@@ -35,6 +36,9 @@ type SimulatorServiceClient interface {
 	// SetTrackPower updates simulator track power and emits unsolicited XpressNet
 	// and system-state broadcasts to subscribed clients.
 	SetTrackPower(ctx context.Context, in *SetTrackPowerRequest, opts ...grpc.CallOption) (*SetTrackPowerResponse, error)
+	// NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
+	// status to subscribed clients, emulating hot-plug detection.
+	NotifyCANDeviceDetected(ctx context.Context, in *NotifyCANDeviceDetectedRequest, opts ...grpc.CallOption) (*NotifyCANDeviceDetectedResponse, error)
 }
 
 type simulatorServiceClient struct {
@@ -65,6 +69,16 @@ func (c *simulatorServiceClient) SetTrackPower(ctx context.Context, in *SetTrack
 	return out, nil
 }
 
+func (c *simulatorServiceClient) NotifyCANDeviceDetected(ctx context.Context, in *NotifyCANDeviceDetectedRequest, opts ...grpc.CallOption) (*NotifyCANDeviceDetectedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotifyCANDeviceDetectedResponse)
+	err := c.cc.Invoke(ctx, SimulatorService_NotifyCANDeviceDetected_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SimulatorServiceServer is the server API for SimulatorService service.
 // All implementations must embed UnimplementedSimulatorServiceServer
 // for forward compatibility.
@@ -77,6 +91,9 @@ type SimulatorServiceServer interface {
 	// SetTrackPower updates simulator track power and emits unsolicited XpressNet
 	// and system-state broadcasts to subscribed clients.
 	SetTrackPower(context.Context, *SetTrackPowerRequest) (*SetTrackPowerResponse, error)
+	// NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
+	// status to subscribed clients, emulating hot-plug detection.
+	NotifyCANDeviceDetected(context.Context, *NotifyCANDeviceDetectedRequest) (*NotifyCANDeviceDetectedResponse, error)
 	mustEmbedUnimplementedSimulatorServiceServer()
 }
 
@@ -92,6 +109,9 @@ func (UnimplementedSimulatorServiceServer) BroadcastSystemState(context.Context,
 }
 func (UnimplementedSimulatorServiceServer) SetTrackPower(context.Context, *SetTrackPowerRequest) (*SetTrackPowerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetTrackPower not implemented")
+}
+func (UnimplementedSimulatorServiceServer) NotifyCANDeviceDetected(context.Context, *NotifyCANDeviceDetectedRequest) (*NotifyCANDeviceDetectedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NotifyCANDeviceDetected not implemented")
 }
 func (UnimplementedSimulatorServiceServer) mustEmbedUnimplementedSimulatorServiceServer() {}
 func (UnimplementedSimulatorServiceServer) testEmbeddedByValue()                          {}
@@ -150,6 +170,24 @@ func _SimulatorService_SetTrackPower_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SimulatorService_NotifyCANDeviceDetected_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NotifyCANDeviceDetectedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SimulatorServiceServer).NotifyCANDeviceDetected(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SimulatorService_NotifyCANDeviceDetected_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SimulatorServiceServer).NotifyCANDeviceDetected(ctx, req.(*NotifyCANDeviceDetectedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SimulatorService_ServiceDesc is the grpc.ServiceDesc for SimulatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -164,6 +202,10 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetTrackPower",
 			Handler:    _SimulatorService_SetTrackPower_Handler,
+		},
+		{
+			MethodName: "NotifyCANDeviceDetected",
+			Handler:    _SimulatorService_NotifyCANDeviceDetected_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

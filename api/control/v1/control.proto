@@ -13,6 +13,10 @@ service SimulatorService {
   // SetTrackPower updates simulator track power and emits unsolicited XpressNet
   // and system-state broadcasts to subscribed clients.
   rpc SetTrackPower(SetTrackPowerRequest) returns (SetTrackPowerResponse);
+
+  // NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
+  // status to subscribed clients, emulating hot-plug detection.
+  rpc NotifyCANDeviceDetected(NotifyCANDeviceDetectedRequest) returns (NotifyCANDeviceDetectedResponse);
 }
 
 message BroadcastSystemStateRequest {}
@@ -28,4 +32,23 @@ message SetTrackPowerRequest {
 message SetTrackPowerResponse {
   bool on = 1;
   bool changed = 2;
+}
+
+enum CANDeviceKind {
+  CAN_DEVICE_KIND_UNSPECIFIED = 0;
+  CAN_DEVICE_KIND_DETECTOR = 1;
+  CAN_DEVICE_KIND_BOOSTER = 2;
+}
+
+message NotifyCANDeviceDetectedRequest {
+  uint32 net_id = 1;
+  CANDeviceKind kind = 2;
+  string name = 3;
+  uint32 module_addr = 4;  // detector: 1-based module address (default 1)
+  uint32 port_count = 5;   // detector: number of feedback ports (default 1)
+  uint32 output_port = 6;  // booster: output port index (default 1)
+}
+
+message NotifyCANDeviceDetectedResponse {
+  int32 recipient_count = 1;
 }

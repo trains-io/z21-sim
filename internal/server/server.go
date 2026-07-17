@@ -22,6 +22,7 @@ type Server struct {
 	trackPower bool
 	mu         sync.Mutex
 	clients    map[string]*clientSession
+	canDevices map[uint16]CANDevice
 }
 
 type clientSession struct {
@@ -51,6 +52,7 @@ func New(addr string, log *slog.Logger) (*Server, error) {
 		serial:     makeSimulatorSerialNumber(time.Now()),
 		trackPower: true,
 		clients:    make(map[string]*clientSession),
+		canDevices: make(map[uint16]CANDevice),
 	}, nil
 }
 
@@ -133,6 +135,16 @@ func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
 				replies = append(replies, reply)
 			} else {
 				s.log.Debug("unhandled LAN_X", "from", remote, "data", msg.Data)
+			}
+		case protocol.HeaderLANCANDeviceGetDescription,
+			protocol.HeaderLANCANDeviceSetDescription,
+			protocol.HeaderLANCANDetector,
+			protocol.HeaderLANCANMaintenance,
+			protocol.HeaderLANCANBoosterSetTrackPower:
+			if canReplies, ok := s.handleCAN(msg); ok {
+				replies = append(replies, canReplies...)
+			} else {
+				s.log.Debug("unhandled CAN", "from", remote, "header", protocol.HeaderName(msg.Header))
 			}
 		default:
 			s.log.Debug("unhandled request", "from", remote, "header", protocol.HeaderName(msg.Header))

@@ -160,6 +160,78 @@ func TestGRPCSetTrackPower(t *testing.T) {
 	}
 }
 
+func TestGRPCNotifyCANDeviceDetected(t *testing.T) {
+	sim, udpAddr := startSimulator(t)
+
+	grpcSrv, err := control.NewGRPCServer(sim, "127.0.0.1:0", nil)
+	if err != nil {
+		t.Fatalf("NewGRPCServer: %v", err)
+	}
+	t.Cleanup(grpcSrv.Stop)
+
+	go func() {
+		_ = grpcSrv.Serve()
+	}()
+
+	c, err := client.DialLocal(udpAddr, 42131)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagCANDetector)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	readCtx, readCancel := context.WithTimeout(ctx, 2*time.Second)
+	defer readCancel()
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		grpcCtx, grpcCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer grpcCancel()
+
+		conn, err := grpc.NewClient(
+			grpcSrv.Addr().String(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		if err != nil {
+			t.Errorf("grpc.NewClient: %v", err)
+			return
+		}
+		defer conn.Close()
+
+		_, err = controlv1.NewSimulatorServiceClient(conn).NotifyCANDeviceDetected(grpcCtx, &controlv1.NotifyCANDeviceDetectedRequest{
+			NetId:      0xDB04,
+			Kind:       controlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR,
+			Name:       "Det 4",
+			ModuleAddr: 60,
+			PortCount:  1,
+		})
+		if err != nil {
+			t.Errorf("NotifyCANDeviceDetected: %v", err)
+		}
+	}()
+
+	msgs, err := c.ReadPacket(readCtx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	reports, err := protocol.CANDetectorReportsFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("CANDetectorReportsFromMessages: %v", err)
+	}
+	if len(reports) != 1 || reports[0].NetID != 0xDB04 || reports[0].Addr != 60 {
+		t.Fatalf("reports = %+v", reports)
+	}
+}
+
 func containsSystemStateBroadcast(msgs []protocol.Message) bool {
 	for _, msg := range msgs {
 		if protocol.IsSystemStateDataChanged(msg) {
