@@ -119,14 +119,17 @@ func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
 			s.removeClient(remote)
 		case protocol.HeaderLANSetBroadcastFlags:
 			if len(msg.Data) >= 4 {
-				session.broadcastFlags = binary.LittleEndian.Uint32(msg.Data)
+				flags := binary.LittleEndian.Uint32(msg.Data)
+				s.mu.Lock()
+				session.broadcastFlags = flags
+				s.mu.Unlock()
 			}
 		case protocol.HeaderLANGetBroadcastFlags:
 			replies = append(replies, s.broadcastFlagsReply(session.broadcastFlags))
 		case protocol.HeaderLANSystemStateGetData:
 			replies = append(replies, s.systemStateReply())
 		case protocol.HeaderLANX:
-			if reply, ok := s.handleLANX(msg.Data); ok {
+			if reply, ok := s.handleLANX(remote, msg.Data); ok {
 				replies = append(replies, reply)
 			} else {
 				s.log.Debug("unhandled LAN_X", "from", remote, "data", msg.Data)

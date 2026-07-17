@@ -10,7 +10,7 @@ import (
 	"github.com/trains-io/z21.go/protocol"
 )
 
-func startTestServer(t *testing.T) (addr string, stop func()) {
+func startTestServer(t *testing.T) (*server.Server, string) {
 	t.Helper()
 
 	srv, err := server.New("127.0.0.1:0", nil)
@@ -34,11 +34,11 @@ func startTestServer(t *testing.T) (addr string, stop func()) {
 		_ = srv.Close()
 	})
 
-	return srv.Addr().String(), func() { cancel() }
+	return srv, srv.Addr().String()
 }
 
 func TestGetHWInfo(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -64,7 +64,7 @@ func TestGetHWInfo(t *testing.T) {
 }
 
 func TestGetSerialNumber(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -90,7 +90,7 @@ func TestGetSerialNumber(t *testing.T) {
 }
 
 func TestGetCode(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -116,7 +116,7 @@ func TestGetCode(t *testing.T) {
 }
 
 func TestGetBroadcastFlags(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -147,7 +147,7 @@ func TestGetBroadcastFlags(t *testing.T) {
 }
 
 func TestSystemStateGetData(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -176,7 +176,7 @@ func TestSystemStateGetData(t *testing.T) {
 }
 
 func TestLogoffClearsClientSession(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -210,7 +210,7 @@ func TestLogoffClearsClientSession(t *testing.T) {
 }
 
 func TestGetXFirmware(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -236,7 +236,7 @@ func TestGetXFirmware(t *testing.T) {
 }
 
 func TestGetXStatus(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -262,7 +262,7 @@ func TestGetXStatus(t *testing.T) {
 }
 
 func TestSetTrackPower(t *testing.T) {
-	addr, _ := startTestServer(t)
+	_, addr := startTestServer(t)
 
 	c, err := client.Dial(addr)
 	if err != nil {
@@ -320,4 +320,161 @@ func TestSetTrackPower(t *testing.T) {
 	if got := protocol.FormatXStatusFlags(state.CentralState); got != "ok" {
 		t.Fatalf("system state CentralState = %q, want ok", got)
 	}
+}
+
+func TestBroadcastSystemState(t *testing.T) {
+	srv, addr := startTestServer(t)
+
+	c, err := client.DialLocal(addr, 42110)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagSystemState)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	readCtx, readCancel := context.WithTimeout(ctx, 2*time.Second)
+	defer readCancel()
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		srv.BroadcastSystemState()
+	}()
+
+	msgs, err := c.ReadPacket(readCtx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	if !containsSystemStateBroadcast(msgs) {
+		t.Fatalf("expected LAN_SYSTEMSTATE_DATACHANGED broadcast, got %#v", msgs)
+	}
+}
+
+func TestTrackPowerChangeBroadcastsToPeer(t *testing.T) {
+	_, addr := startTestServer(t)
+
+	actor, err := client.DialLocal(addr, 42111)
+	if err != nil {
+		t.Fatalf("Dial actor: %v", err)
+	}
+	defer actor.Close()
+
+	observer, err := client.DialLocal(addr, 42112)
+	if err != nil {
+		t.Fatalf("Dial observer: %v", err)
+	}
+	defer observer.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	flags := protocol.BroadcastFlagXpressNet | protocol.BroadcastFlagSystemState
+	if err := observer.Send(ctx, protocol.SetBroadcastFlags(flags)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := observer.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	readCtx, readCancel := context.WithTimeout(ctx, 2*time.Second)
+	defer readCancel()
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		if _, err := actor.Call(ctx, protocol.SetTrackPower(false)); err != nil {
+			t.Errorf("SetTrackPower: %v", err)
+		}
+	}()
+
+	var collected []protocol.Message
+	for len(collected) == 0 || (!containsTrackPowerBC(collected, false) || !containsSystemStateBroadcast(collected)) {
+		if readCtx.Err() != nil {
+			t.Fatalf("timed out waiting for peer broadcasts, got %#v", collected)
+		}
+		packetCtx, packetCancel := context.WithTimeout(readCtx, 500*time.Millisecond)
+		msgs, err := observer.ReadPacket(packetCtx)
+		packetCancel()
+		if err != nil {
+			if readCtx.Err() != nil {
+				t.Fatalf("timed out waiting for peer broadcasts, got %#v", collected)
+			}
+			continue
+		}
+		collected = append(collected, msgs...)
+	}
+
+	if !containsTrackPowerBC(collected, false) {
+		t.Fatalf("expected LAN_X_BC_TRACK_POWER_OFF broadcast, got %#v", collected)
+	}
+	if !containsSystemStateBroadcast(collected) {
+		t.Fatalf("expected LAN_SYSTEMSTATE_DATACHANGED broadcast, got %#v", collected)
+	}
+}
+
+func TestTrackPowerChangeDoesNotEchoToRequester(t *testing.T) {
+	_, addr := startTestServer(t)
+
+	c, err := client.DialLocal(addr, 42113)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	if _, err := c.Call(ctx, protocol.SetTrackPower(false)); err != nil {
+		t.Fatalf("SetTrackPower: %v", err)
+	}
+
+	collectCtx, collectCancel := context.WithTimeout(ctx, 300*time.Millisecond)
+	defer collectCancel()
+
+	msgs, err := c.Collect(collectCtx)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if containsTrackPowerBC(msgs, false) {
+		t.Fatalf("requester should not receive duplicate track power broadcast, got %#v", msgs)
+	}
+}
+
+func containsSystemStateBroadcast(msgs []protocol.Message) bool {
+	for _, msg := range msgs {
+		if protocol.IsSystemStateDataChanged(msg) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsTrackPowerBC(msgs []protocol.Message, wantOn bool) bool {
+	for _, msg := range msgs {
+		if msg.Header != protocol.HeaderLANX {
+			continue
+		}
+		on, err := protocol.ParseTrackPowerBC(msg.Data)
+		if err != nil {
+			continue
+		}
+		if on == wantOn {
+			return true
+		}
+	}
+	return false
 }

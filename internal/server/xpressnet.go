@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net"
+
 	"github.com/trains-io/z21.go/protocol"
 )
 
@@ -21,7 +23,7 @@ const (
 	defaultXFirmwareLSB    byte = 0x20 // BCD 1.20
 )
 
-func (s *Server) handleLANX(data []byte) (protocol.Message, bool) {
+func (s *Server) handleLANX(remote *net.UDPAddr, data []byte) (protocol.Message, bool) {
 	if len(data) < 2 {
 		return protocol.Message{}, false
 	}
@@ -36,10 +38,14 @@ func (s *Server) handleLANX(data []byte) (protocol.Message, bool) {
 		case xCommandGetStatus:
 			return s.xStatusReply(), true
 		case xCommandSetTrackPowerOff:
-			s.setTrackPower(false)
+			if s.setTrackPower(false) {
+				s.notifyTrackPowerChange(false, remote)
+			}
 			return s.trackPowerBCReply(false), true
 		case xCommandSetTrackPowerOn:
-			s.setTrackPower(true)
+			if s.setTrackPower(true) {
+				s.notifyTrackPowerChange(true, remote)
+			}
 			return s.trackPowerBCReply(true), true
 		}
 	}
@@ -47,10 +53,14 @@ func (s *Server) handleLANX(data []byte) (protocol.Message, bool) {
 	return protocol.Message{}, false
 }
 
-func (s *Server) setTrackPower(on bool) {
+func (s *Server) setTrackPower(on bool) bool {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.trackPower == on {
+		return false
+	}
 	s.trackPower = on
-	s.mu.Unlock()
+	return true
 }
 
 func (s *Server) centralState() byte {
