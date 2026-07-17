@@ -30,10 +30,7 @@ func (s *Server) encodeSystemState() []byte {
 	binary.LittleEndian.PutUint16(data[6:8], defaultTemperatureC)
 	binary.LittleEndian.PutUint16(data[8:10], defaultSupplyVoltageMV)
 	binary.LittleEndian.PutUint16(data[10:12], defaultVCCVoltageMV)
-
-	if !s.trackPower {
-		data[12] = centralStateTrackVoltageOff
-	}
+	data[12] = s.centralState()
 
 	data[15] = defaultCapabilities
 	return data

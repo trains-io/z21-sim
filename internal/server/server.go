@@ -125,6 +125,12 @@ func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
 			replies = append(replies, s.broadcastFlagsReply(session.broadcastFlags))
 		case protocol.HeaderLANSystemStateGetData:
 			replies = append(replies, s.systemStateReply())
+		case protocol.HeaderLANX:
+			if reply, ok := s.handleLANX(msg.Data); ok {
+				replies = append(replies, reply)
+			} else {
+				s.log.Debug("unhandled LAN_X", "from", remote, "data", msg.Data)
+			}
 		default:
 			s.log.Debug("unhandled request", "from", remote, "header", protocol.HeaderName(msg.Header))
 		}

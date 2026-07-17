@@ -208,3 +208,116 @@ func TestLogoffClearsClientSession(t *testing.T) {
 		t.Fatalf("flags after logoff = %#x, want 0", got)
 	}
 }
+
+func TestGetXFirmware(t *testing.T) {
+	addr, _ := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	msgs, err := c.Call(ctx, protocol.GetXFirmware())
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	fw, err := protocol.XFirmwareFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("XFirmwareFromMessages: %v", err)
+	}
+	if got := protocol.FormatXFirmwareVersion(fw); got == "" {
+		t.Fatal("expected non-empty firmware version")
+	}
+}
+
+func TestGetXStatus(t *testing.T) {
+	addr, _ := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	msgs, err := c.Call(ctx, protocol.GetXStatus())
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	status, err := protocol.XStatusFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("XStatusFromMessages: %v", err)
+	}
+	if got := protocol.FormatXStatusFlags(status.CentralState); got == "" {
+		t.Fatal("expected non-empty central state")
+	}
+}
+
+func TestSetTrackPower(t *testing.T) {
+	addr, _ := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	msgs, err := c.Call(ctx, protocol.SetTrackPower(false))
+	if err != nil {
+		t.Fatalf("SetTrackPower(off): %v", err)
+	}
+	off, err := protocol.TrackPowerFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("TrackPowerFromMessages(off): %v", err)
+	}
+	if off {
+		t.Fatal("expected track power off")
+	}
+
+	msgs, err = c.Call(ctx, protocol.GetXStatus())
+	if err != nil {
+		t.Fatalf("GetXStatus after off: %v", err)
+	}
+	xstatus, err := protocol.XStatusFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("XStatusFromMessages: %v", err)
+	}
+	if got := protocol.FormatXStatusFlags(xstatus.CentralState); got != "track voltage off" {
+		t.Fatalf("CentralState = %q, want track voltage off", got)
+	}
+
+	msgs, err = c.Call(ctx, protocol.SetTrackPower(true))
+	if err != nil {
+		t.Fatalf("SetTrackPower(on): %v", err)
+	}
+	on, err := protocol.TrackPowerFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("TrackPowerFromMessages(on): %v", err)
+	}
+	if !on {
+		t.Fatal("expected track power on")
+	}
+
+	msgs, err = c.Call(ctx, protocol.SystemStateGetData())
+	if err != nil {
+		t.Fatalf("SystemStateGetData: %v", err)
+	}
+	state, err := protocol.SystemStateFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("SystemStateFromMessages: %v", err)
+	}
+	if got := protocol.FormatXStatusFlags(state.CentralState); got != "ok" {
+		t.Fatalf("system state CentralState = %q, want ok", got)
+	}
+}
