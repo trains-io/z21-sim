@@ -12,8 +12,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/trains-io/z21-sim/internal/control"
-	"github.com/trains-io/z21-sim/internal/server"
+	"github.com/trains-io/z21-sim/internal/sim"
+	"github.com/trains-io/z21-sim/internal/sim/grpcserver"
 )
 
 func main() {
@@ -24,14 +24,14 @@ func main() {
 
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	var traceOpts []server.Option
-	var grpcTraceOpts []control.Option
+	var traceOpts []sim.Option
+	var grpcTraceOpts []grpcserver.Option
 	if *traceFlag {
-		traceOpts = append(traceOpts, server.WithTrace(os.Stderr))
-		grpcTraceOpts = append(grpcTraceOpts, control.WithTrace(os.Stderr))
+		traceOpts = append(traceOpts, sim.WithTrace(os.Stderr))
+		grpcTraceOpts = append(grpcTraceOpts, grpcserver.WithTrace(os.Stderr))
 	}
 
-	srv, err := server.New(*udpAddr, log, traceOpts...)
+	srv, err := sim.New(*udpAddr, log, traceOpts...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "z21-sim: %v\n", err)
 		os.Exit(1)
@@ -40,9 +40,9 @@ func main() {
 
 	log.Info("socket bound", "addr", srv.Addr())
 
-	var grpcSrv *control.GRPCServer
+	var grpcSrv *grpcserver.GRPCServer
 	if *grpcAddr != "" {
-		grpcSrv, err = control.NewGRPCServer(srv, *grpcAddr, log, grpcTraceOpts...)
+		grpcSrv, err = grpcserver.NewGRPCServer(srv, *grpcAddr, log, grpcTraceOpts...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "z21-sim: %v\n", err)
 			os.Exit(1)

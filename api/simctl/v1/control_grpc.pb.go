@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v6.31.1
-// source: api/control/v1/control.proto
+// source: api/simctl/v1/control.proto
 
-package controlv1
+package simctlv1
 
 import (
 	context "context"
@@ -209,5 +209,5 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/control/v1/control.proto",
+	Metadata: "api/simctl/v1/control.proto",
 }

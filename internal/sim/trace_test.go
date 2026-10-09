@@ -1,4 +1,4 @@
-package server_test
+package sim_test
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/trains-io/z21-sim/internal/server"
+	"github.com/trains-io/z21-sim/internal/sim"
 	"github.com/trains-io/z21.go/client"
 	"github.com/trains-io/z21.go/protocol"
 )
@@ -16,7 +16,7 @@ import (
 func TestTraceLAN(t *testing.T) {
 	var buf bytes.Buffer
 
-	srv, err := server.New("127.0.0.1:0", nil, server.WithTrace(&buf))
+	srv, err := sim.New("127.0.0.1:0", nil, sim.WithTrace(&buf))
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -63,13 +63,13 @@ func TestTraceLAN(t *testing.T) {
 func TestTraceCANBroadcastWithoutSubscribers(t *testing.T) {
 	var buf bytes.Buffer
 
-	srv, err := server.New("127.0.0.1:0", nil, server.WithTrace(&buf))
+	srv, err := sim.New("127.0.0.1:0", nil, sim.WithTrace(&buf))
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
 	defer srv.Close()
 
-	device, err := server.BuildCANDevice(0xDB04, server.CANDeviceDetector, "Block 4", 60, 2, 0)
+	device, err := sim.BuildCANDevice(0xDB04, sim.CANDeviceDetector, "Block 4", 60, 2, 0)
 	if err != nil {
 		t.Fatalf("BuildCANDevice: %v", err)
 	}

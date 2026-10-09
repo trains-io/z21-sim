@@ -1,11 +1,11 @@
-package server_test
+package sim_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/trains-io/z21-sim/internal/server"
+	"github.com/trains-io/z21-sim/internal/sim"
 	"github.com/trains-io/z21.go/client"
 	"github.com/trains-io/z21.go/protocol"
 )
@@ -58,7 +58,7 @@ func TestGetCANDeviceDescription(t *testing.T) {
 func TestCANDetectorPoll(t *testing.T) {
 	srv, addr := startTestServer(t)
 
-	device, err := server.BuildCANDevice(0xDB04, server.CANDeviceDetector, "Det", 31, 2, 0)
+	device, err := sim.BuildCANDevice(0xDB04, sim.CANDeviceDetector, "Det", 31, 2, 0)
 	if err != nil {
 		t.Fatalf("BuildCANDevice: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestNotifyCANDeviceDetectedBroadcast(t *testing.T) {
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		device, err := server.BuildCANDevice(0xDB04, server.CANDeviceDetector, "Det", 60, 1, 0)
+		device, err := sim.BuildCANDevice(0xDB04, sim.CANDeviceDetector, "Det", 60, 1, 0)
 		if err != nil {
 			t.Errorf("BuildCANDevice: %v", err)
 			return
@@ -146,7 +146,7 @@ func TestNotifyCANDeviceDetectedBroadcast(t *testing.T) {
 func TestCANBoosterTrackPower(t *testing.T) {
 	srv, addr := startTestServer(t)
 
-	device, err := server.BuildCANDevice(0xC101, server.CANDeviceBooster, "Booster 1", 0, 0, 1)
+	device, err := sim.BuildCANDevice(0xC101, sim.CANDeviceBooster, "Booster 1", 0, 0, 1)
 	if err != nil {
 		t.Fatalf("BuildCANDevice: %v", err)
 	}

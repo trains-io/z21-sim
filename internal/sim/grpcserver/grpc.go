@@ -1,4 +1,4 @@
-package control
+package grpcserver
 
 import (
 	"context"
@@ -6,26 +6,26 @@ import (
 	"log/slog"
 	"net"
 
-	controlv1 "github.com/trains-io/z21-sim/api/control/v1"
-	"github.com/trains-io/z21-sim/internal/server"
+	simctlv1 "github.com/trains-io/z21-sim/api/simctl/v1"
+	"github.com/trains-io/z21-sim/internal/sim"
 	"github.com/trains-io/z21-sim/internal/trace"
 	"google.golang.org/grpc"
 )
 
 // GRPCServer exposes simulator control RPCs to sidecar containers.
 type GRPCServer struct {
-	controlv1.UnimplementedSimulatorServiceServer
+	simctlv1.UnimplementedSimulatorServiceServer
 
-	sim    *server.Server
+	sim    *sim.Server
 	log    *slog.Logger
 	tracer *trace.Tracer
 	srv    *grpc.Server
 	lis    net.Listener
 }
 
-// NewGRPCServer listens on addr and serves the control API for sim.
-func NewGRPCServer(sim *server.Server, addr string, log *slog.Logger, opts ...Option) (*GRPCServer, error) {
-	if sim == nil {
+// NewGRPCServer listens on addr and serves the control API for simulator.
+func NewGRPCServer(simulator *sim.Server, addr string, log *slog.Logger, opts ...Option) (*GRPCServer, error) {
+	if simulator == nil {
 		return nil, fmt.Errorf("control: nil simulator")
 	}
 	if log == nil {
@@ -37,7 +37,7 @@ func NewGRPCServer(sim *server.Server, addr string, log *slog.Logger, opts ...Op
 		return nil, fmt.Errorf("control: listen %s: %w", addr, err)
 	}
 
-	g := &GRPCServer{sim: sim, log: log, lis: lis}
+	g := &GRPCServer{sim: simulator, log: log, lis: lis}
 	applyOptions(g, opts)
 
 	var serverOpts []grpc.ServerOption
@@ -46,7 +46,7 @@ func NewGRPCServer(sim *server.Server, addr string, log *slog.Logger, opts ...Op
 	}
 	srv := grpc.NewServer(serverOpts...)
 	g.srv = srv
-	controlv1.RegisterSimulatorServiceServer(srv, g)
+	simctlv1.RegisterSimulatorServiceServer(srv, g)
 	return g, nil
 }
 
@@ -83,23 +83,23 @@ func (g *GRPCServer) Stop() {
 	g.srv.GracefulStop()
 }
 
-func (g *GRPCServer) BroadcastSystemState(context.Context, *controlv1.BroadcastSystemStateRequest) (*controlv1.BroadcastSystemStateResponse, error) {
+func (g *GRPCServer) BroadcastSystemState(context.Context, *simctlv1.BroadcastSystemStateRequest) (*simctlv1.BroadcastSystemStateResponse, error) {
 	count := g.sim.BroadcastSystemState()
-	return &controlv1.BroadcastSystemStateResponse{RecipientCount: int32(count)}, nil
+	return &simctlv1.BroadcastSystemStateResponse{RecipientCount: int32(count)}, nil
 }
 
-func (g *GRPCServer) SetTrackPower(_ context.Context, req *controlv1.SetTrackPowerRequest) (*controlv1.SetTrackPowerResponse, error) {
+func (g *GRPCServer) SetTrackPower(_ context.Context, req *simctlv1.SetTrackPowerRequest) (*simctlv1.SetTrackPowerResponse, error) {
 	if req == nil {
 		return nil, fmt.Errorf("control: nil request")
 	}
 	changed := g.sim.SetTrackPowerAndNotify(req.GetOn())
-	return &controlv1.SetTrackPowerResponse{
+	return &simctlv1.SetTrackPowerResponse{
 		On:      req.GetOn(),
 		Changed: changed,
 	}, nil
 }
 
-func (g *GRPCServer) NotifyCANDeviceDetected(_ context.Context, req *controlv1.NotifyCANDeviceDetectedRequest) (*controlv1.NotifyCANDeviceDetectedResponse, error) {
+func (g *GRPCServer) NotifyCANDeviceDetected(_ context.Context, req *simctlv1.NotifyCANDeviceDetectedRequest) (*simctlv1.NotifyCANDeviceDetectedResponse, error) {
 	if req == nil {
 		return nil, fmt.Errorf("control: nil request")
 	}
@@ -109,7 +109,7 @@ func (g *GRPCServer) NotifyCANDeviceDetected(_ context.Context, req *controlv1.N
 		return nil, err
 	}
 
-	device, err := server.BuildCANDevice(
+	device, err := sim.BuildCANDevice(
 		req.GetNetId(),
 		kind,
 		req.GetName(),
@@ -122,15 +122,15 @@ func (g *GRPCServer) NotifyCANDeviceDetected(_ context.Context, req *controlv1.N
 	}
 
 	count := g.sim.NotifyCANDeviceDetected(device)
-	return &controlv1.NotifyCANDeviceDetectedResponse{RecipientCount: int32(count)}, nil
+	return &simctlv1.NotifyCANDeviceDetectedResponse{RecipientCount: int32(count)}, nil
 }
 
-func canDeviceKindFromProto(kind controlv1.CANDeviceKind) (server.CANDeviceKind, error) {
+func canDeviceKindFromProto(kind simctlv1.CANDeviceKind) (sim.CANDeviceKind, error) {
 	switch kind {
-	case controlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR:
-		return server.CANDeviceDetector, nil
-	case controlv1.CANDeviceKind_CAN_DEVICE_KIND_BOOSTER:
-		return server.CANDeviceBooster, nil
+	case simctlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR:
+		return sim.CANDeviceDetector, nil
+	case simctlv1.CANDeviceKind_CAN_DEVICE_KIND_BOOSTER:
+		return sim.CANDeviceBooster, nil
 	default:
 		return 0, fmt.Errorf("control: kind is required")
 	}

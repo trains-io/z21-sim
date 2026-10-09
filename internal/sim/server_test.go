@@ -1,19 +1,19 @@
-package server_test
+package sim_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/trains-io/z21-sim/internal/server"
+	"github.com/trains-io/z21-sim/internal/sim"
 	"github.com/trains-io/z21.go/client"
 	"github.com/trains-io/z21.go/protocol"
 )
 
-func startTestServer(t *testing.T) (*server.Server, string) {
+func startTestServer(t *testing.T) (*sim.Server, string) {
 	t.Helper()
 
-	srv, err := server.New("127.0.0.1:0", nil)
+	srv, err := sim.New("127.0.0.1:0", nil)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

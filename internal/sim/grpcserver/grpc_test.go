@@ -1,23 +1,23 @@
-package control_test
+package grpcserver_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	controlv1 "github.com/trains-io/z21-sim/api/control/v1"
-	"github.com/trains-io/z21-sim/internal/control"
-	"github.com/trains-io/z21-sim/internal/server"
+	simctlv1 "github.com/trains-io/z21-sim/api/simctl/v1"
+	"github.com/trains-io/z21-sim/internal/sim"
+	"github.com/trains-io/z21-sim/internal/sim/grpcserver"
 	"github.com/trains-io/z21.go/client"
 	"github.com/trains-io/z21.go/protocol"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func startSimulator(t *testing.T) (*server.Server, string) {
+func startSimulator(t *testing.T) (*sim.Server, string) {
 	t.Helper()
 
-	sim, err := server.New("127.0.0.1:0", nil)
+	simulator, err := sim.New("127.0.0.1:0", nil)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -25,7 +25,7 @@ func startSimulator(t *testing.T) (*server.Server, string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		done <- sim.Serve(ctx)
+		done <- simulator.Serve(ctx)
 	}()
 
 	t.Cleanup(func() {
@@ -35,16 +35,16 @@ func startSimulator(t *testing.T) (*server.Server, string) {
 		case <-time.After(2 * time.Second):
 			t.Log("simulator did not stop cleanly")
 		}
-		_ = sim.Close()
+		_ = simulator.Close()
 	})
 
-	return sim, sim.Addr().String()
+	return simulator, simulator.Addr().String()
 }
 
 func TestGRPCBroadcastSystemState(t *testing.T) {
-	sim, udpAddr := startSimulator(t)
+	simulator, udpAddr := startSimulator(t)
 
-	grpcSrv, err := control.NewGRPCServer(sim, "127.0.0.1:0", nil)
+	grpcSrv, err := grpcserver.NewGRPCServer(simulator, "127.0.0.1:0", nil)
 	if err != nil {
 		t.Fatalf("NewGRPCServer: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestGRPCBroadcastSystemState(t *testing.T) {
 		}
 		defer conn.Close()
 
-		_, err = controlv1.NewSimulatorServiceClient(conn).BroadcastSystemState(grpcCtx, &controlv1.BroadcastSystemStateRequest{})
+		_, err = simctlv1.NewSimulatorServiceClient(conn).BroadcastSystemState(grpcCtx, &simctlv1.BroadcastSystemStateRequest{})
 		if err != nil {
 			t.Errorf("BroadcastSystemState: %v", err)
 		}
@@ -104,9 +104,9 @@ func TestGRPCBroadcastSystemState(t *testing.T) {
 }
 
 func TestGRPCSetTrackPower(t *testing.T) {
-	sim, udpAddr := startSimulator(t)
+	simulator, udpAddr := startSimulator(t)
 
-	grpcSrv, err := control.NewGRPCServer(sim, "127.0.0.1:0", nil)
+	grpcSrv, err := grpcserver.NewGRPCServer(simulator, "127.0.0.1:0", nil)
 	if err != nil {
 		t.Fatalf("NewGRPCServer: %v", err)
 	}
@@ -125,12 +125,12 @@ func TestGRPCSetTrackPower(t *testing.T) {
 	}
 	defer conn.Close()
 
-	grpcClient := controlv1.NewSimulatorServiceClient(conn)
+	grpcClient := simctlv1.NewSimulatorServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	resp, err := grpcClient.SetTrackPower(ctx, &controlv1.SetTrackPowerRequest{On: false})
+	resp, err := grpcClient.SetTrackPower(ctx, &simctlv1.SetTrackPowerRequest{On: false})
 	if err != nil {
 		t.Fatalf("SetTrackPower: %v", err)
 	}
@@ -161,9 +161,9 @@ func TestGRPCSetTrackPower(t *testing.T) {
 }
 
 func TestGRPCNotifyCANDeviceDetected(t *testing.T) {
-	sim, udpAddr := startSimulator(t)
+	simulator, udpAddr := startSimulator(t)
 
-	grpcSrv, err := control.NewGRPCServer(sim, "127.0.0.1:0", nil)
+	grpcSrv, err := grpcserver.NewGRPCServer(simulator, "127.0.0.1:0", nil)
 	if err != nil {
 		t.Fatalf("NewGRPCServer: %v", err)
 	}
@@ -207,9 +207,9 @@ func TestGRPCNotifyCANDeviceDetected(t *testing.T) {
 		}
 		defer conn.Close()
 
-		_, err = controlv1.NewSimulatorServiceClient(conn).NotifyCANDeviceDetected(grpcCtx, &controlv1.NotifyCANDeviceDetectedRequest{
+		_, err = simctlv1.NewSimulatorServiceClient(conn).NotifyCANDeviceDetected(grpcCtx, &simctlv1.NotifyCANDeviceDetectedRequest{
 			NetId:      0xDB04,
-			Kind:       controlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR,
+			Kind:       simctlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR,
 			Name:       "Det 4",
 			ModuleAddr: 60,
 			PortCount:  1,

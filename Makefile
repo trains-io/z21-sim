@@ -14,10 +14,10 @@ help: ## Show targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*##' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*## "}; {printf "  %-18s %s\n", $$1, $$2}'
 
-proto: ## Regenerate gRPC code from api/control/v1/control.proto
+proto: ## Regenerate gRPC code from api/simctl/v1/control.proto
 	protoc --go_out=. --go_opt=module=github.com/trains-io/z21-sim \
 		--go-grpc_out=. --go-grpc_opt=module=github.com/trains-io/z21-sim \
-		api/control/v1/control.proto
+		api/simctl/v1/control.proto
 
 build: ## Compile binary to bin/
 	go build -o $(BIN) ./cmd/z21-sim
