@@ -1,4 +1,4 @@
-.PHONY: help build clean run run-trace test tidy proto docker-build docker-run docker-stop test-integration
+.PHONY: help build clean run run-trace check fmt-check vet test tidy proto docker-build docker-run docker-stop test-integration
 
 .DEFAULT_GOAL := help
 
@@ -31,8 +31,20 @@ run: build ## Run the simulator locally
 run-trace: build ## Run with LAN and gRPC trace dumps on stderr
 	$(BIN) -addr $(ADDR) -grpc-addr $(GRPC_ADDR) -trace
 
-test: ## Run unit tests
-	go test ./... -count=1
+check: fmt-check vet test ## Run the same checks as CI (gofmt, go vet, unit tests with -race)
+
+fmt-check: ## Fail if any Go file needs gofmt
+	@unformatted=$$(gofmt -l .); \
+	if [ -n "$$unformatted" ]; then \
+		echo "Files need gofmt:"; echo "$$unformatted"; exit 1; \
+	fi
+
+vet: ## Run go vet, including integration-tagged files
+	go vet ./...
+	go vet -tags=integration ./...
+
+test: ## Run unit tests with the race detector
+	go test -race ./... -count=1
 
 test-integration: docker-build ## Run Docker integration tests
 	go test -tags=integration ./integration/... -count=1 -timeout=10m

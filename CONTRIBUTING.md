@@ -29,16 +29,16 @@ go build -o bin/z21-sim ./cmd/z21-sim
 
 ## Test
 
-Run all unit tests:
+Run the same checks as CI (gofmt, `go vet`, unit tests with the race detector) before pushing:
 
 ```bash
-make test
+make check
 ```
 
-Or directly:
+Or run only the unit tests:
 
 ```bash
-go test ./... -count=1
+make test     # go test -race ./... -count=1
 ```
 
 Run Docker integration tests (builds the image first):
@@ -261,7 +261,7 @@ Requires `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on your `PATH`.
 
 ## CI
 
-GitHub Actions runs unit tests, integration tests, and a Docker image build on every push and pull request. Tagged images are published to `ghcr.io/trains-io/z21-sim`.
+GitHub Actions runs `make check` and then `make test-integration` (which builds the Docker image) on every push and pull request. Images are published to `ghcr.io/trains-io/z21-sim` on pushes to `main` and on `v*` tags.
 
 ## Drop-in for z21.go integration tests
 

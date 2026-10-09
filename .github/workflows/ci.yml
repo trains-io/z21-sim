@@ -18,21 +18,13 @@ jobs:
           go-version: "1.24"
 
       - name: Check formatting
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "Files need gofmt:"
-            echo "$unformatted"
-            exit 1
-          fi
+        run: make fmt-check
 
       - name: Vet
-        run: |
-          go vet ./...
-          go vet -tags=integration ./...
+        run: make vet
 
       - name: Unit tests
-        run: go test -race ./... -count=1
+        run: make test
 
   integration:
     runs-on: ubuntu-latest
@@ -45,20 +37,5 @@ jobs:
         with:
           go-version: "1.24"
 
-      - name: Build test image
-        run: docker build -t z21-sim:ci .
-
-      - name: Integration tests
-        env:
-          Z21_TESTSERVER_IMAGE: z21-sim:ci
-        run: go test -tags=integration ./integration/... -count=1 -timeout=10m
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Verify Docker image builds
-        run: docker build -t z21-sim:ci .
+      - name: Build image and run integration tests
+        run: make test-integration TAG=ci
