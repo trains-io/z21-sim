@@ -40,9 +40,9 @@ func main() {
 
 	log.Info("socket bound", "addr", srv.Addr())
 
-	var grpcSrv *grpcserver.GRPCServer
+	var grpcSrv *grpcserver.Server
 	if *grpcAddr != "" {
-		grpcSrv, err = grpcserver.NewGRPCServer(srv, *grpcAddr, log, grpcTraceOpts...)
+		grpcSrv, err = grpcserver.New(srv, *grpcAddr, log, grpcTraceOpts...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "z21-sim: %v\n", err)
 			os.Exit(1)

@@ -77,7 +77,7 @@ With `-trace`, incoming gRPC requests and outgoing LAN broadcasts are printed on
 
 ## Test the gRPC control plane with grpcurl
 
-The control API is defined in [`api/simctl/v1/control.proto`](api/simctl/v1/control.proto). The simulator does not enable gRPC server reflection, so grpcurl needs the proto file on the command line.
+The control API is defined in [`api/simctl/v1/simctl.proto`](api/simctl/v1/simctl.proto). The simulator does not enable gRPC server reflection, so grpcurl needs the proto file on the command line.
 
 Install grpcurl (examples):
 
@@ -96,20 +96,20 @@ Common grpcurl options used below:
 
 - `-plaintext` — no TLS (local development only)
 - `-import-path "$REPO_ROOT"` — proto import root
-- `-proto api/simctl/v1/control.proto` — service definition
+- `-proto api/simctl/v1/simctl.proto` — service definition
 
 ### List services and methods
 
 ```bash
 grpcurl -plaintext \
   -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/control.proto \
-  list "$GRPC_ADDR"
+  -proto api/simctl/v1/simctl.proto \
+  list
 
 grpcurl -plaintext \
   -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/control.proto \
-  describe trains.io.z21sim.control.v1.SimulatorService
+  -proto api/simctl/v1/simctl.proto \
+  describe trains.io.z21.simctl.v1.SimulatorService
 ```
 
 ### BroadcastSystemState
@@ -119,10 +119,10 @@ Emits `LAN_SYSTEMSTATE_DATACHANGED` to clients subscribed to system-state update
 ```bash
 grpcurl -plaintext \
   -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/control.proto \
+  -proto api/simctl/v1/simctl.proto \
   -d '{}' \
   "$GRPC_ADDR" \
-  trains.io.z21sim.control.v1.SimulatorService/BroadcastSystemState
+  trains.io.z21.simctl.v1.SimulatorService/BroadcastSystemState
 ```
 
 Example response:
@@ -143,18 +143,18 @@ Turns track power on or off and emits unsolicited XpressNet and system-state bro
 # Track off
 grpcurl -plaintext \
   -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/control.proto \
+  -proto api/simctl/v1/simctl.proto \
   -d '{"on": false}' \
   "$GRPC_ADDR" \
-  trains.io.z21sim.control.v1.SimulatorService/SetTrackPower
+  trains.io.z21.simctl.v1.SimulatorService/SetTrackPower
 
 # Track on
 grpcurl -plaintext \
   -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/control.proto \
+  -proto api/simctl/v1/simctl.proto \
   -d '{"on": true}' \
   "$GRPC_ADDR" \
-  trains.io.z21sim.control.v1.SimulatorService/SetTrackPower
+  trains.io.z21.simctl.v1.SimulatorService/SetTrackPower
 ```
 
 Example response:
@@ -175,7 +175,7 @@ Registers a CAN device and broadcasts its initial status, emulating hot-plug det
 ```bash
 grpcurl -plaintext \
   -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/control.proto \
+  -proto api/simctl/v1/simctl.proto \
   -d '{
     "netId": 56068,
     "kind": "CAN_DEVICE_KIND_DETECTOR",
@@ -184,7 +184,7 @@ grpcurl -plaintext \
     "portCount": 2
   }' \
   "$GRPC_ADDR" \
-  trains.io.z21sim.control.v1.SimulatorService/NotifyCANDeviceDetected
+  trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected
 ```
 
 **Booster** — NetID `0xBC01` (48129):
@@ -192,7 +192,7 @@ grpcurl -plaintext \
 ```bash
 grpcurl -plaintext \
   -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/control.proto \
+  -proto api/simctl/v1/simctl.proto \
   -d '{
     "netId": 48129,
     "kind": "CAN_DEVICE_KIND_BOOSTER",
@@ -200,7 +200,7 @@ grpcurl -plaintext \
     "outputPort": 1
   }' \
   "$GRPC_ADDR" \
-  trains.io.z21sim.control.v1.SimulatorService/NotifyCANDeviceDetected
+  trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected
 ```
 
 Example response:
@@ -236,10 +236,10 @@ make run-trace
 ```bash
 grpcurl -plaintext \
   -import-path "$(pwd)" \
-  -proto api/simctl/v1/control.proto \
+  -proto api/simctl/v1/simctl.proto \
   -d '{"netId":56068,"kind":"CAN_DEVICE_KIND_DETECTOR","name":"Block 4","moduleAddr":60,"portCount":2}' \
   127.0.0.1:50051 \
-  trains.io.z21sim.control.v1.SimulatorService/NotifyCANDeviceDetected
+  trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected
 ```
 
 Expected results:
@@ -251,7 +251,7 @@ For system-state or track-power events, subscribe to `SYSTEM_UPDATES` or `XPRESS
 
 ## Regenerate gRPC stubs
 
-After editing `api/simctl/v1/control.proto`:
+After editing `api/simctl/v1/simctl.proto`:
 
 ```bash
 make proto

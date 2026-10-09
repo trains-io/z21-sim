@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package trains.io.z21sim.control.v1;
+package trains.io.z21.simctl.v1;
 
 option go_package = "github.com/trains-io/z21-sim/api/simctl/v1;simctlv1";
 

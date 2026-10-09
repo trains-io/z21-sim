@@ -44,9 +44,9 @@ func startSimulator(t *testing.T) (*sim.Server, string) {
 func TestGRPCBroadcastSystemState(t *testing.T) {
 	simulator, udpAddr := startSimulator(t)
 
-	grpcSrv, err := grpcserver.NewGRPCServer(simulator, "127.0.0.1:0", nil)
+	grpcSrv, err := grpcserver.New(simulator, "127.0.0.1:0", nil)
 	if err != nil {
-		t.Fatalf("NewGRPCServer: %v", err)
+		t.Fatalf("grpcserver.New: %v", err)
 	}
 	t.Cleanup(grpcSrv.Stop)
 
@@ -106,9 +106,9 @@ func TestGRPCBroadcastSystemState(t *testing.T) {
 func TestGRPCSetTrackPower(t *testing.T) {
 	simulator, udpAddr := startSimulator(t)
 
-	grpcSrv, err := grpcserver.NewGRPCServer(simulator, "127.0.0.1:0", nil)
+	grpcSrv, err := grpcserver.New(simulator, "127.0.0.1:0", nil)
 	if err != nil {
-		t.Fatalf("NewGRPCServer: %v", err)
+		t.Fatalf("grpcserver.New: %v", err)
 	}
 	t.Cleanup(grpcSrv.Stop)
 
@@ -163,9 +163,9 @@ func TestGRPCSetTrackPower(t *testing.T) {
 func TestGRPCNotifyCANDeviceDetected(t *testing.T) {
 	simulator, udpAddr := startSimulator(t)
 
-	grpcSrv, err := grpcserver.NewGRPCServer(simulator, "127.0.0.1:0", nil)
+	grpcSrv, err := grpcserver.New(simulator, "127.0.0.1:0", nil)
 	if err != nil {
-		t.Fatalf("NewGRPCServer: %v", err)
+		t.Fatalf("grpcserver.New: %v", err)
 	}
 	t.Cleanup(grpcSrv.Stop)
 

@@ -56,10 +56,10 @@ func TestLogGRPC(t *testing.T) {
 	var buf bytes.Buffer
 	tr := trace.New(&buf)
 
-	tr.LogGRPC("/trains.io.z21sim.control.v1.SimulatorService/SetTrackPower", nil)
+	tr.LogGRPC("/trains.io.z21.simctl.v1.SimulatorService/SetTrackPower", nil)
 
 	out := buf.String()
-	if !strings.Contains(out, "gRPC << /trains.io.z21sim.control.v1.SimulatorService/SetTrackPower") {
+	if !strings.Contains(out, "gRPC << /trains.io.z21.simctl.v1.SimulatorService/SetTrackPower") {
 		t.Fatalf("output = %q", out)
 	}
 }

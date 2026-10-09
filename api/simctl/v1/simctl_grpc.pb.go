@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v6.31.1
-// source: api/simctl/v1/control.proto
+// source: api/simctl/v1/simctl.proto
 
 package simctlv1
 
@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SimulatorService_BroadcastSystemState_FullMethodName    = "/trains.io.z21sim.control.v1.SimulatorService/BroadcastSystemState"
-	SimulatorService_SetTrackPower_FullMethodName           = "/trains.io.z21sim.control.v1.SimulatorService/SetTrackPower"
-	SimulatorService_NotifyCANDeviceDetected_FullMethodName = "/trains.io.z21sim.control.v1.SimulatorService/NotifyCANDeviceDetected"
+	SimulatorService_BroadcastSystemState_FullMethodName    = "/trains.io.z21.simctl.v1.SimulatorService/BroadcastSystemState"
+	SimulatorService_SetTrackPower_FullMethodName           = "/trains.io.z21.simctl.v1.SimulatorService/SetTrackPower"
+	SimulatorService_NotifyCANDeviceDetected_FullMethodName = "/trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected"
 )
 
 // SimulatorServiceClient is the client API for SimulatorService service.
@@ -192,7 +192,7 @@ func _SimulatorService_NotifyCANDeviceDetected_Handler(srv interface{}, ctx cont
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var SimulatorService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "trains.io.z21sim.control.v1.SimulatorService",
+	ServiceName: "trains.io.z21.simctl.v1.SimulatorService",
 	HandlerType: (*SimulatorServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -209,5 +209,5 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/simctl/v1/control.proto",
+	Metadata: "api/simctl/v1/simctl.proto",
 }

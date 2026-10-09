@@ -9,12 +9,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Option configures a GRPCServer.
-type Option func(*GRPCServer)
+// Option configures a Server.
+type Option func(*Server)
 
 // WithTrace enables gRPC request dumps to out.
 func WithTrace(out io.Writer) Option {
-	return func(g *GRPCServer) {
+	return func(g *Server) {
 		g.tracer = trace.New(out)
 	}
 }
