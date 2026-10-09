@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	controlv1 "github.com/trains-io/z21-sim-go/api/control/v1"
-	"github.com/trains-io/z21-sim-go/internal/control"
-	"github.com/trains-io/z21-sim-go/internal/server"
+	controlv1 "github.com/trains-io/z21-sim/api/control/v1"
+	"github.com/trains-io/z21-sim/internal/control"
+	"github.com/trains-io/z21-sim/internal/server"
 	"github.com/trains-io/z21.go/client"
 	"github.com/trains-io/z21.go/protocol"
 	"google.golang.org/grpc"

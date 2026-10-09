@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/trains-io/z21-sim-go/internal/trace"
+	"github.com/trains-io/z21-sim/internal/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )

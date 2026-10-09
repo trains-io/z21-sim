@@ -12,8 +12,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/trains-io/z21-sim-go/internal/control"
-	"github.com/trains-io/z21-sim-go/internal/server"
+	"github.com/trains-io/z21-sim/internal/control"
+	"github.com/trains-io/z21-sim/internal/server"
 )
 
 func main() {

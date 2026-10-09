@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/trains-io/z21-sim-go/internal/trace"
+	"github.com/trains-io/z21-sim/internal/trace"
 	"github.com/trains-io/z21.go/protocol"
 )
 

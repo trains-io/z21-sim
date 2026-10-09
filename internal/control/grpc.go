@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net"
 
-	controlv1 "github.com/trains-io/z21-sim-go/api/control/v1"
-	"github.com/trains-io/z21-sim-go/internal/server"
-	"github.com/trains-io/z21-sim-go/internal/trace"
+	controlv1 "github.com/trains-io/z21-sim/api/control/v1"
+	"github.com/trains-io/z21-sim/internal/server"
+	"github.com/trains-io/z21-sim/internal/trace"
 	"google.golang.org/grpc"
 )
 

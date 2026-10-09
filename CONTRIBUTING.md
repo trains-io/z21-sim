@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to [github.com/trains-io/z21-sim-go](https://github.com/trains-io/z21-sim-go).
+Thanks for contributing to [github.com/trains-io/z21-sim](https://github.com/trains-io/z21-sim).
 
 ## Prerequisites
 

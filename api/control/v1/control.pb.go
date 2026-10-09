@@ -406,7 +406,7 @@ const file_api_control_v1_control_proto_rawDesc = "" +
 	"\x10SimulatorService\x12\x8b\x01\n" +
 	"\x14BroadcastSystemState\x128.trains.io.z21sim.control.v1.BroadcastSystemStateRequest\x1a9.trains.io.z21sim.control.v1.BroadcastSystemStateResponse\x12v\n" +
 	"\rSetTrackPower\x121.trains.io.z21sim.control.v1.SetTrackPowerRequest\x1a2.trains.io.z21sim.control.v1.SetTrackPowerResponse\x12\x94\x01\n" +
-	"\x17NotifyCANDeviceDetected\x12;.trains.io.z21sim.control.v1.NotifyCANDeviceDetectedRequest\x1a<.trains.io.z21sim.control.v1.NotifyCANDeviceDetectedResponseB:Z8github.com/trains-io/z21-sim-go/api/control/v1;controlv1b\x06proto3"
+	"\x17NotifyCANDeviceDetected\x12;.trains.io.z21sim.control.v1.NotifyCANDeviceDetectedRequest\x1a<.trains.io.z21sim.control.v1.NotifyCANDeviceDetectedResponseB7Z5github.com/trains-io/z21-sim/api/control/v1;controlv1b\x06proto3"
 
 var (
 	file_api_control_v1_control_proto_rawDescOnce sync.Once

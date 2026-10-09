@@ -3,7 +3,7 @@ package server
 import (
 	"io"
 
-	"github.com/trains-io/z21-sim-go/internal/trace"
+	"github.com/trains-io/z21-sim/internal/trace"
 )
 
 // Option configures a Server.

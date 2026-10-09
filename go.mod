@@ -1,4 +1,4 @@
-module github.com/trains-io/z21-sim-go
+module github.com/trains-io/z21-sim
 
 go 1.24
 
