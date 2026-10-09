@@ -1,7 +1,6 @@
 package sim
 
 import (
-	"encoding/binary"
 	"time"
 
 	"github.com/trains-io/z21.go/protocol"
@@ -16,11 +15,9 @@ func makeSimulatorSerialNumber(now time.Time) uint32 {
 }
 
 func (s *Server) serialReply() protocol.Message {
-	data := make([]byte, 4)
-	binary.LittleEndian.PutUint32(data, s.serial)
-	return protocol.Message{Header: protocol.HeaderLANGetSerialNumber, Data: data}
+	return protocol.EncodeSerialNumber(s.serial)
 }
 
 func (s *Server) codeReply() protocol.Message {
-	return protocol.Message{Header: protocol.HeaderLANGetCode, Data: []byte{protocol.CodeNoLock}}
+	return protocol.EncodeCode(protocol.CodeNoLock)
 }

@@ -6,9 +6,9 @@ import (
 	"github.com/trains-io/z21.go/protocol"
 )
 
-func TestEncodeSystemStateTrackPowerOn(t *testing.T) {
+func TestSystemStateReplyTrackPowerOn(t *testing.T) {
 	s := &Server{trackPower: true}
-	state, err := protocol.ParseSystemState(s.encodeSystemState())
+	state, err := protocol.ParseSystemState(s.systemStateReply().Data)
 	if err != nil {
 		t.Fatalf("ParseSystemState: %v", err)
 	}
@@ -17,9 +17,9 @@ func TestEncodeSystemStateTrackPowerOn(t *testing.T) {
 	}
 }
 
-func TestEncodeSystemStateTrackPowerOff(t *testing.T) {
+func TestSystemStateReplyTrackPowerOff(t *testing.T) {
 	s := &Server{trackPower: false}
-	state, err := protocol.ParseSystemState(s.encodeSystemState())
+	state, err := protocol.ParseSystemState(s.systemStateReply().Data)
 	if err != nil {
 		t.Fatalf("ParseSystemState: %v", err)
 	}

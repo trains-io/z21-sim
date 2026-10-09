@@ -2,7 +2,6 @@ package sim
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"net"
@@ -136,18 +135,20 @@ func (s *Server) handlePacket(remote *net.UDPAddr, payload []byte) {
 		case protocol.HeaderLANLogoff:
 			s.removeClient(remote)
 		case protocol.HeaderLANSetBroadcastFlags:
-			if len(msg.Data) >= 4 {
-				flags := binary.LittleEndian.Uint32(msg.Data)
+			if flags, err := protocol.ParseSetBroadcastFlags(msg.Data); err == nil {
 				s.mu.Lock()
 				session.broadcastFlags = flags
 				s.mu.Unlock()
 			}
 		case protocol.HeaderLANGetBroadcastFlags:
-			replies = append(replies, s.broadcastFlagsReply(session.broadcastFlags))
+			s.mu.Lock()
+			flags := session.broadcastFlags
+			s.mu.Unlock()
+			replies = append(replies, protocol.EncodeBroadcastFlags(flags))
 		case protocol.HeaderLANSystemStateGetData:
 			replies = append(replies, s.systemStateReply())
 		case protocol.HeaderLANX:
-			if reply, ok := s.handleLANX(remote, msg.Data); ok {
+			if reply, ok := s.handleLANX(remote, msg); ok {
 				replies = append(replies, reply)
 			} else {
 				s.log.Debug("unhandled LAN_X", "from", remote, "data", msg.Data)
@@ -224,8 +225,5 @@ func (s *Server) removeClient(remote *net.UDPAddr) {
 }
 
 func (s *Server) hwInfoReply() protocol.Message {
-	data := make([]byte, 8)
-	binary.LittleEndian.PutUint32(data[0:4], protocol.HwTypeZ21New)
-	binary.LittleEndian.PutUint32(data[4:8], defaultFirmwareVersion)
-	return protocol.Message{Header: protocol.HeaderLANGetHWInfo, Data: data}
+	return protocol.EncodeHWInfo(protocol.HWInfo{HwType: protocol.HwTypeZ21New, FirmwareVersion: defaultFirmwareVersion})
 }

@@ -1,17 +1,10 @@
 package sim
 
 import (
-	"encoding/binary"
 	"net"
 
 	"github.com/trains-io/z21.go/protocol"
 )
-
-func (s *Server) broadcastFlagsReply(flags uint32) protocol.Message {
-	data := make([]byte, 4)
-	binary.LittleEndian.PutUint32(data, flags)
-	return protocol.Message{Header: protocol.HeaderLANGetBroadcastFlags, Data: data}
-}
 
 // BroadcastSystemState sends LAN_SYSTEMSTATE_DATACHANGED to all clients
 // subscribed to system-state broadcasts.
@@ -31,7 +24,7 @@ func (s *Server) SetTrackPowerAndNotify(on bool) bool {
 
 func (s *Server) notifyTrackPowerChange(on bool, except *net.UDPAddr) {
 	s.broadcastMany(
-		[]protocol.Message{s.trackPowerBCReply(on), s.xStatusReply()},
+		[]protocol.Message{protocol.EncodeTrackPowerBC(on), s.xStatusReply()},
 		protocol.BroadcastFlagXpressNet,
 		except,
 	)

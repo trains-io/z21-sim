@@ -1,7 +1,6 @@
 package sim
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/trains-io/z21.go/protocol"
@@ -114,27 +113,23 @@ func (s *Server) handleCAN(msg protocol.Message) ([]protocol.Message, bool) {
 }
 
 func (s *Server) handleCANDeviceGetDescription(data []byte) ([]protocol.Message, bool) {
-	if len(data) < 2 {
+	netID, err := protocol.ParseGetCANDeviceDescription(data)
+	if err != nil {
 		return nil, false
 	}
-	netID := binary.LittleEndian.Uint16(data[0:2])
 	device, ok := s.canDevice(netID)
 	name := ""
 	if ok {
 		name = device.Name
 	}
-	return []protocol.Message{{
-		Header: protocol.HeaderLANCANDeviceGetDescription,
-		Data:   encodeCANDeviceDescription(netID, name),
-	}}, true
+	return []protocol.Message{protocol.EncodeCANDeviceDescription(netID, name)}, true
 }
 
 func (s *Server) handleCANDeviceSetDescription(data []byte) ([]protocol.Message, bool) {
-	if len(data) < 2+protocol.CANBoosterNameLen {
+	netID, name, err := protocol.ParseSetCANDeviceDescription(data)
+	if err != nil {
 		return nil, false
 	}
-	netID := binary.LittleEndian.Uint16(data[0:2])
-	name := parseCANDeviceName(data[2 : 2+protocol.CANBoosterNameLen])
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -152,10 +147,10 @@ func (s *Server) handleCANDeviceSetDescription(data []byte) ([]protocol.Message,
 }
 
 func (s *Server) handleCANDetectorPoll(data []byte) ([]protocol.Message, bool) {
-	if len(data) < 3 || data[0] != 0x00 {
+	netID, err := protocol.ParseGetCANDetector(data)
+	if err != nil {
 		return nil, false
 	}
-	netID := binary.LittleEndian.Uint16(data[1:3])
 
 	var devices []CANDevice
 	if netID == protocol.CANDetectorPollAll {
@@ -193,11 +188,10 @@ func (s *Server) handleCANMaintenance(data []byte) {
 }
 
 func (s *Server) handleCANBoosterSetTrackPower(data []byte) ([]protocol.Message, bool) {
-	if len(data) < 3 {
+	netID, power, err := protocol.ParseSetCANBoosterTrackPower(data)
+	if err != nil {
 		return nil, false
 	}
-	netID := binary.LittleEndian.Uint16(data[0:2])
-	power := protocol.CANBoosterTrackPower(data[2])
 
 	s.mu.Lock()
 	device, ok := s.canDevices[netID]
@@ -241,55 +235,25 @@ func (s *Server) detectorDevices() []CANDevice {
 func (s *Server) detectorReports(device CANDevice) []protocol.Message {
 	reports := make([]protocol.Message, 0, len(device.Ports))
 	for port, value := range device.Ports {
-		reports = append(reports, protocol.Message{
-			Header: protocol.HeaderLANCANDetector,
-			Data: encodeCANDetectorReport(protocol.CANDetectorReport{
-				NetID:  device.NetID,
-				Addr:   device.ModuleAddr,
-				Port:   uint8(port),
-				Type:   protocol.CANDetectorTypeOccupancy,
-				Value1: value,
-			}),
-		})
+		reports = append(reports, protocol.EncodeCANDetector(protocol.CANDetectorReport{
+			NetID:  device.NetID,
+			Addr:   device.ModuleAddr,
+			Port:   uint8(port),
+			Type:   protocol.CANDetectorTypeOccupancy,
+			Value1: value,
+		}))
 	}
 	return reports
 }
 
 func (s *Server) boosterSystemStateMessage(device CANDevice) protocol.Message {
-	data := make([]byte, 10)
-	binary.LittleEndian.PutUint16(data[0:2], device.NetID)
-	binary.LittleEndian.PutUint16(data[2:4], device.OutputPort)
-	binary.LittleEndian.PutUint16(data[4:6], device.State)
-	binary.LittleEndian.PutUint16(data[6:8], device.VCCmV)
-	binary.LittleEndian.PutUint16(data[8:10], device.CurrentmA)
-	return protocol.Message{Header: protocol.HeaderLANCANBoosterSystemState, Data: data}
-}
-
-func encodeCANDeviceDescription(netID uint16, name string) []byte {
-	data := make([]byte, 2+protocol.CANBoosterNameLen)
-	binary.LittleEndian.PutUint16(data[0:2], netID)
-	copy(data[2:], name)
-	return data
-}
-
-func encodeCANDetectorReport(report protocol.CANDetectorReport) []byte {
-	data := make([]byte, 10)
-	binary.LittleEndian.PutUint16(data[0:2], report.NetID)
-	binary.LittleEndian.PutUint16(data[2:4], report.Addr)
-	data[4] = report.Port
-	data[5] = report.Type
-	binary.LittleEndian.PutUint16(data[6:8], report.Value1)
-	binary.LittleEndian.PutUint16(data[8:10], report.Value2)
-	return data
-}
-
-func parseCANDeviceName(raw []byte) string {
-	for i, b := range raw {
-		if b == 0 {
-			return string(raw[:i])
-		}
-	}
-	return string(raw)
+	return protocol.EncodeCANBoosterSystemState(protocol.CANBoosterSystemState{
+		NetID:      device.NetID,
+		OutputPort: device.OutputPort,
+		State:      device.State,
+		VCCVoltage: device.VCCmV,
+		Current:    device.CurrentmA,
+	})
 }
 
 // BuildCANDevice constructs a CAN device from control-plane parameters.
