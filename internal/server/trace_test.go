@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,11 +26,12 @@ func TestTraceLAN(t *testing.T) {
 	go func() {
 		done <- srv.Serve(ctx)
 	}()
-	t.Cleanup(func() {
+	stop := sync.OnceFunc(func() {
 		cancel()
 		<-done
 		_ = srv.Close()
 	})
+	t.Cleanup(stop)
 
 	c, err := client.Dial(srv.Addr().String())
 	if err != nil {
@@ -44,6 +46,8 @@ func TestTraceLAN(t *testing.T) {
 		t.Fatalf("Call: %v", err)
 	}
 
+	// The server goroutine writes buf; stop it before reading.
+	stop()
 	out := buf.String()
 	if !strings.Contains(out, "LAN <<") {
 		t.Fatalf("missing RX trace: %q", out)
