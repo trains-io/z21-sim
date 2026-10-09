@@ -33,7 +33,7 @@ func main() {
 
 	srv, err := server.New(*udpAddr, log, traceOpts...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "z21-sim-go: %v\n", err)
+		fmt.Fprintf(os.Stderr, "z21-sim: %v\n", err)
 		os.Exit(1)
 	}
 	defer srv.Close()
@@ -44,7 +44,7 @@ func main() {
 	if *grpcAddr != "" {
 		grpcSrv, err = control.NewGRPCServer(srv, *grpcAddr, log, grpcTraceOpts...)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "z21-sim-go: %v\n", err)
+			fmt.Fprintf(os.Stderr, "z21-sim: %v\n", err)
 			os.Exit(1)
 		}
 		defer grpcSrv.Stop()
@@ -80,7 +80,7 @@ func main() {
 			grpcSrv.Stop()
 		}
 	case err := <-errCh:
-		fmt.Fprintf(os.Stderr, "z21-sim-go: %v\n", err)
+		fmt.Fprintf(os.Stderr, "z21-sim: %v\n", err)
 		os.Exit(1)
 	}
 

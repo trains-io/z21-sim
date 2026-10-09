@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 	case isDockerSkippable(err):
 		sharedTestServerUnavailable = true
 	default:
-		fmt.Fprintf(os.Stderr, "start z21-sim-go test server: %v\n", err)
+		fmt.Fprintf(os.Stderr, "start z21-sim test server: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -51,7 +51,7 @@ func requireDocker(t *testing.T) {
 		t.Skip("docker not available; skipping integration test")
 	}
 	if sharedTestServerAddr == "" {
-		t.Fatal("shared z21-sim-go test server not configured")
+		t.Fatal("shared z21-sim test server not configured")
 	}
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker not installed; skipping integration test")
@@ -159,9 +159,9 @@ func waitForServerReady(addr string) error {
 		select {
 		case <-ctx.Done():
 			if lastErr != nil {
-				return fmt.Errorf("z21-sim-go not ready at %s: %w (last error: %v)", addr, ctx.Err(), lastErr)
+				return fmt.Errorf("z21-sim not ready at %s: %w (last error: %v)", addr, ctx.Err(), lastErr)
 			}
-			return fmt.Errorf("z21-sim-go not ready at %s: %w", addr, ctx.Err())
+			return fmt.Errorf("z21-sim not ready at %s: %w", addr, ctx.Err())
 		case <-time.After(200 * time.Millisecond):
 		}
 	}

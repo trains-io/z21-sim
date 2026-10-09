@@ -18,13 +18,13 @@ For end-to-end LAN testing, [z21cli](https://github.com/trains-io/z21cli) is use
 From the repository root:
 
 ```bash
-make build    # bin/z21-sim-go
+make build    # bin/z21-sim
 ```
 
 Equivalent manual command:
 
 ```bash
-go build -o bin/z21-sim-go ./cmd/z21-sim-go
+go build -o bin/z21-sim ./cmd/z21-sim
 ```
 
 ## Test
@@ -70,7 +70,7 @@ Trace mode is helpful when debugging control-plane injections:
 ```bash
 make run-trace
 # or
-./bin/z21-sim-go -addr 127.0.0.1:21105 -grpc-addr 127.0.0.1:50051 -trace
+./bin/z21-sim -addr 127.0.0.1:21105 -grpc-addr 127.0.0.1:50051 -trace
 ```
 
 With `-trace`, incoming gRPC requests and outgoing LAN broadcasts are printed on stderr (even when no UDP client is subscribed).
@@ -261,7 +261,7 @@ Requires `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on your `PATH`.
 
 ## CI
 
-GitHub Actions runs unit tests, integration tests, and a Docker image build on every push and pull request. Tagged images are published to `ghcr.io/trains-io/z21-sim-go`.
+GitHub Actions runs unit tests, integration tests, and a Docker image build on every push and pull request. Tagged images are published to `ghcr.io/trains-io/z21-sim`.
 
 ## Drop-in for z21.go integration tests
 

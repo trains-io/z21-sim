@@ -4,7 +4,7 @@ package trains.io.z21sim.control.v1;
 
 option go_package = "github.com/trains-io/z21-sim/api/control/v1;controlv1";
 
-// SimulatorService is the gRPC control plane for z21-sim-go.
+// SimulatorService is the gRPC control plane for z21-sim.
 // A sidecar (z21-sim-controller) uses it to inject unsolicited Z21 LAN events.
 service SimulatorService {
   // BroadcastSystemState emits LAN_SYSTEMSTATE_DATACHANGED to subscribed clients.

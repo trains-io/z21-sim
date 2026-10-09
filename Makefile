@@ -2,12 +2,12 @@
 
 .DEFAULT_GOAL := help
 
-BIN := bin/z21-sim-go
+BIN := bin/z21-sim
 ADDR ?= 127.0.0.1:21105
 GRPC_ADDR ?= 127.0.0.1:50051
-IMAGE ?= ghcr.io/trains-io/z21-sim-go
+IMAGE ?= ghcr.io/trains-io/z21-sim
 TAG ?= local
-CONTAINER ?= z21-sim-go
+CONTAINER ?= z21-sim
 export Z21_TESTSERVER_IMAGE ?= $(IMAGE):$(TAG)
 
 help: ## Show targets
@@ -20,7 +20,7 @@ proto: ## Regenerate gRPC code from api/control/v1/control.proto
 		api/control/v1/control.proto
 
 build: ## Compile binary to bin/
-	go build -o $(BIN) ./cmd/z21-sim-go
+	go build -o $(BIN) ./cmd/z21-sim
 
 run: build ## Run the simulator locally
 	$(BIN) -addr $(ADDR) -grpc-addr $(GRPC_ADDR)

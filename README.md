@@ -1,6 +1,6 @@
-# z21-sim-go
+# z21-sim
 
-Go implementation of a [Z21 LAN protocol](https://www.z21.eu) test server, intended to replace [z21-sim](https://github.com/trains-io/z21-sim) with feature parity and room to grow.
+Go implementation of a [Z21 LAN protocol](https://www.z21.eu) test server, aiming for feature parity with the C++ reference server [z21-ref](https://github.com/trains-io/z21-ref) and room to grow.
 
 The simulator listens on UDP port **21105** (same as a physical Z21). It reuses wire-format types from [z21.go](https://github.com/trains-io/z21.go).
 
@@ -47,22 +47,22 @@ make proto             # regenerate gRPC stubs
 
 ```bash
 # From z21.go repository
-export Z21_TESTSERVER_IMAGE=ghcr.io/trains-io/z21-sim-go:latest
+export Z21_TESTSERVER_IMAGE=ghcr.io/trains-io/z21-sim:latest
 make test-integration
 ```
 
 Or build locally from a sibling checkout:
 
 ```bash
-export Z21_TESTSERVER_IMAGE=z21-sim-go:local
-make -C ../z21-sim-go docker-build TAG=local
+export Z21_TESTSERVER_IMAGE=z21-sim:local
+make -C ../z21-sim docker-build TAG=local
 make test-integration
 ```
 
 Alternatively, point at a Dockerfile context:
 
 ```bash
-export Z21_TESTSERVER_DOCKERFILE=/path/to/z21-sim-go
+export Z21_TESTSERVER_DOCKERFILE=/path/to/z21-sim
 go test -tags=integration ./client/... -count=1 -timeout=10m
 ```
 

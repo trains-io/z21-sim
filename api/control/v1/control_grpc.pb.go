@@ -28,7 +28,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// SimulatorService is the gRPC control plane for z21-sim-go.
+// SimulatorService is the gRPC control plane for z21-sim.
 // A sidecar (z21-sim-controller) uses it to inject unsolicited Z21 LAN events.
 type SimulatorServiceClient interface {
 	// BroadcastSystemState emits LAN_SYSTEMSTATE_DATACHANGED to subscribed clients.
@@ -83,7 +83,7 @@ func (c *simulatorServiceClient) NotifyCANDeviceDetected(ctx context.Context, in
 // All implementations must embed UnimplementedSimulatorServiceServer
 // for forward compatibility.
 //
-// SimulatorService is the gRPC control plane for z21-sim-go.
+// SimulatorService is the gRPC control plane for z21-sim.
 // A sidecar (z21-sim-controller) uses it to inject unsolicited Z21 LAN events.
 type SimulatorServiceServer interface {
 	// BroadcastSystemState emits LAN_SYSTEMSTATE_DATACHANGED to subscribed clients.

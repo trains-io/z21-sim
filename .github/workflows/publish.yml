@@ -12,7 +12,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE: ghcr.io/trains-io/z21-sim-go
+  IMAGE: ghcr.io/trains-io/z21-sim
 
 jobs:
   publish:
