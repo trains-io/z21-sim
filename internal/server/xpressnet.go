@@ -7,20 +7,20 @@ import (
 )
 
 const (
-	xHeaderGetVersion      byte = 0x21
-	xCommandGetStatus      byte = 0x24
-	xHeaderStatusReply     byte = 0x62
-	xStatusDB0             byte = 0x22
+	xHeaderGetVersion        byte = 0x21
+	xCommandGetStatus        byte = 0x24
+	xHeaderStatusReply       byte = 0x62
+	xStatusDB0               byte = 0x22
 	xCommandSetTrackPowerOff byte = 0x80
 	xCommandSetTrackPowerOn  byte = 0x81
-	xCommandGetFirmware    byte = 0xF1
-	xFirmwareDB0           byte = 0x0A
-	xHeaderFirmwareReply   byte = 0xF3
-	xHeaderXBusBC          byte = 0x61
-	xBCDB0TrackPowerOff    byte = 0x00
-	xBCDB0TrackPowerOn     byte = 0x01
-	defaultXFirmwareMSB    byte = 0x01
-	defaultXFirmwareLSB    byte = 0x20 // BCD 1.20
+	xCommandGetFirmware      byte = 0xF1
+	xFirmwareDB0             byte = 0x0A
+	xHeaderFirmwareReply     byte = 0xF3
+	xHeaderXBusBC            byte = 0x61
+	xBCDB0TrackPowerOff      byte = 0x00
+	xBCDB0TrackPowerOn       byte = 0x01
+	defaultXFirmwareMSB      byte = 0x01
+	defaultXFirmwareLSB      byte = 0x20 // BCD 1.20
 )
 
 func (s *Server) handleLANX(remote *net.UDPAddr, data []byte) (protocol.Message, bool) {

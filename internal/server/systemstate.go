@@ -12,7 +12,7 @@ const (
 	defaultVCCVoltageMV              = 1000
 	defaultMainCurrentMA             = 100
 	defaultTemperatureC              = 42
-	defaultCapabilities       byte   = 0x31 // DCC + loco + accessory commands
+	defaultCapabilities         byte = 0x31 // DCC + loco + accessory commands
 )
 
 func (s *Server) systemStateReply() protocol.Message {
