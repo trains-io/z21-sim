@@ -1,4 +1,4 @@
-.PHONY: help build run test tidy proto docker-build docker-run docker-stop test-integration
+.PHONY: help build clean run run-trace test tidy proto docker-build docker-run docker-stop test-integration
 
 .DEFAULT_GOAL := help
 
@@ -21,6 +21,9 @@ proto: ## Regenerate gRPC code from api/control/v1/control.proto
 
 build: ## Compile binary to bin/
 	go build -o $(BIN) ./cmd/z21-sim
+
+clean: ## Remove build artifacts in bin/
+	rm -rf bin/
 
 run: build ## Run the simulator locally
 	$(BIN) -addr $(ADDR) -grpc-addr $(GRPC_ADDR)
