@@ -18,10 +18,11 @@ const defaultFirmwareVersion uint32 = 0x00000120 // BCD 1.20
 // Server simulates a Z21 command station on top of z21.go/server, which owns
 // the UDP transport, client sessions and broadcasts.
 type Server struct {
-	z21      *server.Server
-	log      *slog.Logger
-	traceOut io.Writer
-	serial   uint32
+	z21             *server.Server
+	log             *slog.Logger
+	traceOut        io.Writer
+	additionalAddrs []string
+	serial          uint32
 
 	mu         sync.Mutex
 	trackPower bool
@@ -45,6 +46,9 @@ func New(addr string, log *slog.Logger, opts ...Option) (*Server, error) {
 	serverOpts := []server.Option{server.WithHandler(s.mux()), server.WithLogger(log)}
 	if s.traceOut != nil {
 		serverOpts = append(serverOpts, server.WithObserver(server.NewTracer(s.traceOut)))
+	}
+	for _, a := range s.additionalAddrs {
+		serverOpts = append(serverOpts, server.WithAdditionalAddr(a))
 	}
 	z21, err := server.New(addr, serverOpts...)
 	if err != nil {
@@ -70,7 +74,15 @@ func (s *Server) Addr() net.Addr {
 	return s.z21.Addr()
 }
 
-// Close releases the UDP socket.
+// Addrs returns the local addresses of all UDP sockets, starting with Addr.
+func (s *Server) Addrs() []net.Addr {
+	if s == nil || s.z21 == nil {
+		return nil
+	}
+	return s.z21.Addrs()
+}
+
+// Close releases the UDP sockets.
 func (s *Server) Close() error {
 	if s == nil || s.z21 == nil {
 		return nil

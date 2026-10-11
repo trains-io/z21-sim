@@ -51,7 +51,7 @@ Use `-count=1` while iterating to disable the test cache.
 
 ## Run locally
 
-Start the simulator (UDP **21105**, gRPC **50051**):
+Start the simulator (UDP **21105** and **21106**, gRPC **50051**):
 
 ```bash
 make run
@@ -62,6 +62,7 @@ Flags:
 | Flag | Default | Purpose |
 |------|---------|---------|
 | `-addr` | `0.0.0.0:21105` | Z21 LAN UDP listen address |
+| `-alt-addr` | `0.0.0.0:21106` | Second Z21 LAN UDP listen address, sharing client sessions (`""` disables) |
 | `-grpc-addr` | `127.0.0.1:50051` | gRPC control listen address (`""` disables gRPC) |
 | `-trace` | `false` | Dump LAN and gRPC traffic to stderr |
 
@@ -70,7 +71,7 @@ Trace mode is helpful when debugging control-plane injections:
 ```bash
 make run-trace
 # or
-./bin/z21-sim -addr 127.0.0.1:21105 -grpc-addr 127.0.0.1:50051 -trace
+./bin/z21-sim -addr 127.0.0.1:21105 -alt-addr 127.0.0.1:21106 -grpc-addr 127.0.0.1:50051 -trace
 ```
 
 With `-trace`, incoming gRPC requests and outgoing LAN broadcasts are printed on stderr (even when no UDP client is subscribed).

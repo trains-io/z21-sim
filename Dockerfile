@@ -1,4 +1,4 @@
-# Headless Z21 LAN simulator (Go). UDP API on 21105; gRPC control on 50051.
+# Headless Z21 LAN simulator (Go). UDP API on 21105 and 21106; gRPC control on 50051.
 
 FROM golang:1.24-bookworm AS builder
 
@@ -19,7 +19,8 @@ RUN apt-get update && \
 COPY --from=builder /z21-sim /usr/local/bin/z21-sim
 
 EXPOSE 21105/udp
+EXPOSE 21106/udp
 EXPOSE 50051/tcp
 
 ENTRYPOINT ["/usr/local/bin/z21-sim"]
-CMD ["-addr", "0.0.0.0:21105", "-grpc-addr", "127.0.0.1:50051"]
+CMD ["-addr", "0.0.0.0:21105", "-alt-addr", "0.0.0.0:21106", "-grpc-addr", "127.0.0.1:50051"]

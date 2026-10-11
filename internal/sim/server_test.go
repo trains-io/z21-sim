@@ -10,10 +10,10 @@ import (
 	"github.com/trains-io/z21.go/protocol"
 )
 
-func startTestServer(t *testing.T) (*sim.Server, string) {
+func startTestServer(t *testing.T, opts ...sim.Option) (*sim.Server, string) {
 	t.Helper()
 
-	srv, err := sim.New("127.0.0.1:0", nil)
+	srv, err := sim.New("127.0.0.1:0", nil, opts...)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -416,6 +416,46 @@ func TestTrackPowerChangeBroadcastsToPeer(t *testing.T) {
 	}
 	if !containsSystemStateBroadcast(collected) {
 		t.Fatalf("expected LAN_SYSTEMSTATE_DATACHANGED broadcast, got %#v", collected)
+	}
+}
+
+func TestAlternatePortSharesSessions(t *testing.T) {
+	srv, addr := startTestServer(t, sim.WithAdditionalAddr("127.0.0.1:0"))
+	addrs := srv.Addrs()
+	if len(addrs) != 2 {
+		t.Fatalf("Addrs = %v, want 2 addresses", addrs)
+	}
+
+	actor, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial actor: %v", err)
+	}
+	defer actor.Close()
+	observer, err := client.Dial(addrs[1].String())
+	if err != nil {
+		t.Fatalf("Dial observer on alternate port: %v", err)
+	}
+	defer observer.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := observer.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagSystemState)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := observer.Call(ctx, protocol.GetHWInfo()); err != nil {
+		t.Fatalf("GetHWInfo on alternate port: %v", err)
+	}
+
+	if _, err := actor.Call(ctx, protocol.SetTrackPower(false)); err != nil {
+		t.Fatalf("SetTrackPower: %v", err)
+	}
+	msgs, err := observer.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket on alternate port: %v", err)
+	}
+	if !containsSystemStateBroadcast(msgs) {
+		t.Fatalf("alternate-port client got %#v, want system state broadcast", msgs)
 	}
 }
 

@@ -4,6 +4,7 @@
 
 BIN := bin/z21-sim
 ADDR ?= 127.0.0.1:21105
+ALT_ADDR ?= 127.0.0.1:21106
 GRPC_ADDR ?= 127.0.0.1:50051
 IMAGE ?= ghcr.io/trains-io/z21-sim
 TAG ?= local
@@ -26,10 +27,10 @@ clean: ## Remove build artifacts in bin/
 	rm -rf bin/
 
 run: build ## Run the simulator locally
-	$(BIN) -addr $(ADDR) -grpc-addr $(GRPC_ADDR)
+	$(BIN) -addr $(ADDR) -alt-addr '$(ALT_ADDR)' -grpc-addr $(GRPC_ADDR)
 
 run-trace: build ## Run with LAN and gRPC trace dumps on stderr
-	$(BIN) -addr $(ADDR) -grpc-addr $(GRPC_ADDR) -trace
+	$(BIN) -addr $(ADDR) -alt-addr '$(ALT_ADDR)' -grpc-addr $(GRPC_ADDR) -trace
 
 check: fmt-check vet test ## Run the same checks as CI (gofmt, go vet, unit tests with -race)
 
@@ -56,7 +57,7 @@ docker-build: ## Build the Docker image
 	docker build -t $(IMAGE):$(TAG) .
 
 docker-run: ## Start the simulator container detached
-	docker run --rm -d --name $(CONTAINER) -p 21105:21105/udp $(IMAGE):$(TAG)
+	docker run --rm -d --name $(CONTAINER) -p 21105:21105/udp -p 21106:21106/udp $(IMAGE):$(TAG)
 
 docker-stop: ## Stop and remove the simulator container
 	@docker rm -f $(CONTAINER) >/dev/null 2>&1 && echo "Stopped $(CONTAINER)" || echo "No container named $(CONTAINER)"

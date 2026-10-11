@@ -2,7 +2,7 @@
 
 Go implementation of a [Z21 LAN protocol](https://www.z21.eu) test server, aiming for feature parity with the C++ reference server [z21-ref](https://github.com/trains-io/z21-ref) and room to grow.
 
-The simulator listens on UDP port **21105** (same as a physical Z21). It reuses wire-format types from [z21.go](https://github.com/trains-io/z21.go).
+The simulator listens on UDP ports **21105** and **21106** (same as a physical Z21; both share client sessions). It reuses wire-format types from [z21.go](https://github.com/trains-io/z21.go).
 
 A **gRPC control plane** on port **50051** lets a sidecar (`z21-sim-controller`) inject unsolicited broadcast events (for example from a Custom Resource in Kubernetes) without sending Z21 UDP directly to gateway clients.
 
@@ -71,6 +71,7 @@ go test -tags=integration ./client/... -count=1 -timeout=10m
 | Port | Protocol | Purpose |
 |------|----------|---------|
 | 21105 | UDP | Z21 LAN API |
+| 21106 | UDP | Z21 LAN API, alternate port (shares client sessions with 21105) |
 | 50051 | TCP | gRPC control plane (localhost sidecar in pod) |
 
 ## License

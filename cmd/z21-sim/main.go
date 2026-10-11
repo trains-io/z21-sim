@@ -18,27 +18,33 @@ import (
 
 func main() {
 	udpAddr := flag.String("addr", "0.0.0.0:21105", "UDP listen address")
+	altAddr := flag.String("alt-addr", "0.0.0.0:21106", "second UDP listen address sharing client sessions (empty disables)")
 	grpcAddr := flag.String("grpc-addr", "127.0.0.1:50051", "gRPC control listen address (empty disables)")
 	traceFlag := flag.Bool("trace", false, "dump LAN and gRPC traffic to stderr")
 	flag.Parse()
 
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	var traceOpts []sim.Option
+	var simOpts []sim.Option
 	var grpcTraceOpts []grpcserver.Option
+	if *altAddr != "" {
+		simOpts = append(simOpts, sim.WithAdditionalAddr(*altAddr))
+	}
 	if *traceFlag {
-		traceOpts = append(traceOpts, sim.WithTrace(os.Stderr))
+		simOpts = append(simOpts, sim.WithTrace(os.Stderr))
 		grpcTraceOpts = append(grpcTraceOpts, grpcserver.WithTrace(os.Stderr))
 	}
 
-	srv, err := sim.New(*udpAddr, log, traceOpts...)
+	srv, err := sim.New(*udpAddr, log, simOpts...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "z21-sim: %v\n", err)
 		os.Exit(1)
 	}
 	defer srv.Close()
 
-	log.Info("socket bound", "addr", srv.Addr())
+	for _, addr := range srv.Addrs() {
+		log.Info("socket bound", "addr", addr)
+	}
 
 	var grpcSrv *grpcserver.Server
 	if *grpcAddr != "" {
