@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/trains-io/z21.go/protocol"
+	"github.com/trains-io/z21.go/server"
 )
 
 const (
@@ -86,12 +87,21 @@ func (s *Server) NotifyCANDeviceDetected(device CANDevice) int {
 func (s *Server) broadcastCANDeviceDetected(device CANDevice) int {
 	switch device.Kind {
 	case CANDeviceDetector:
-		return s.broadcastMany(s.detectorReports(device), protocol.BroadcastFlagCANDetector, nil)
+		return s.z21.Broadcast(protocol.BroadcastFlagCANDetector, s.detectorReports(device)...)
 	case CANDeviceBooster:
-		return s.broadcast(s.boosterSystemStateMessage(device), protocol.BroadcastFlagCANBooster, nil)
+		return s.z21.Broadcast(protocol.BroadcastFlagCANBooster, s.boosterSystemStateMessage(device))
 	default:
 		return 0
 	}
+}
+
+func (s *Server) serveCAN(w server.ResponseWriter, r *server.Request) {
+	replies, ok := s.handleCAN(r.Message)
+	if !ok {
+		s.log.Debug("unhandled CAN", "from", r.Client.Addr, "header", protocol.HeaderName(r.Message.Header))
+		return
+	}
+	w.Reply(replies...)
 }
 
 func (s *Server) handleCAN(msg protocol.Message) ([]protocol.Message, bool) {

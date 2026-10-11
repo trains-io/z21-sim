@@ -1,9 +1,8 @@
 package sim
 
 import (
-	"net"
-
 	"github.com/trains-io/z21.go/protocol"
+	"github.com/trains-io/z21.go/server"
 )
 
 const (
@@ -17,35 +16,17 @@ const (
 	defaultXFirmwareLSB      byte = 0x20 // BCD 1.20
 )
 
-func (s *Server) handleLANX(remote *net.UDPAddr, msg protocol.Message) (protocol.Message, bool) {
-	xHeader, data, err := protocol.ParseLANX(msg)
-	if err != nil || len(data) < 1 {
-		return protocol.Message{}, false
-	}
-
-	switch xHeader {
-	case xCommandGetFirmware:
-		if data[0] == xFirmwareDB0 {
-			return s.xFirmwareReply(), true
+// trackPowerHandler switches track power. The requester gets the track power
+// broadcast as reply; other X-Bus subscribers get it with the new X status, and
+// system-state subscribers (including the requester) get the new system state.
+func (s *Server) trackPowerHandler(on bool) server.Handler {
+	return server.HandlerFunc(func(w server.ResponseWriter, _ *server.Request) {
+		if s.setTrackPower(on) {
+			w.Broadcast(protocol.BroadcastFlagXpressNet, protocol.EncodeTrackPowerBC(on), s.xStatusReply())
+			s.BroadcastSystemState()
 		}
-	case xHeaderGetVersion:
-		switch data[0] {
-		case xCommandGetStatus:
-			return s.xStatusReply(), true
-		case xCommandSetTrackPowerOff:
-			if s.setTrackPower(false) {
-				s.notifyTrackPowerChange(false, remote)
-			}
-			return protocol.EncodeTrackPowerBC(false), true
-		case xCommandSetTrackPowerOn:
-			if s.setTrackPower(true) {
-				s.notifyTrackPowerChange(true, remote)
-			}
-			return protocol.EncodeTrackPowerBC(true), true
-		}
-	}
-
-	return protocol.Message{}, false
+		w.Reply(protocol.EncodeTrackPowerBC(on))
+	})
 }
 
 func (s *Server) setTrackPower(on bool) bool {

@@ -49,10 +49,10 @@ func TestTraceLAN(t *testing.T) {
 	// The server goroutine writes buf; stop it before reading.
 	stop()
 	out := buf.String()
-	if !strings.Contains(out, "LAN <<") {
+	if !strings.Contains(out, "<< "+c.LocalAddr().String()) {
 		t.Fatalf("missing RX trace: %q", out)
 	}
-	if !strings.Contains(out, "LAN >>") {
+	if !strings.Contains(out, ">> "+c.LocalAddr().String()) {
 		t.Fatalf("missing TX trace: %q", out)
 	}
 	if !strings.Contains(out, "LAN_GET_HWINFO") {
@@ -79,7 +79,7 @@ func TestTraceCANBroadcastWithoutSubscribers(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "LAN >> broadcast CAN detector (0 recipients)") {
+	if !strings.Contains(out, ">> broadcast CAN detector (0 recipients)") {
 		t.Fatalf("missing broadcast trace: %q", out)
 	}
 	if !strings.Contains(out, "LAN_CAN_DETECTOR") {
