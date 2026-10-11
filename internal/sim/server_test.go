@@ -454,6 +454,49 @@ func TestTrackPowerChangeDoesNotEchoToRequester(t *testing.T) {
 	}
 }
 
+func TestTrackPowerReplyCarriesSystemStateForSubscribedRequester(t *testing.T) {
+	_, addr := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.DefaultBroadcastFlags)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = c.Call(context.Background(), protocol.SetTrackPower(true))
+	})
+
+	if err := c.Send(ctx, protocol.SetTrackPower(false)); err != nil {
+		t.Fatalf("SetTrackPower: %v", err)
+	}
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	if !containsTrackPowerBC(msgs, false) || !containsSystemStateBroadcast(msgs) {
+		t.Fatalf("reply packet = %#v, want track power off and system state together", msgs)
+	}
+
+	// Nothing may be left over to confuse the next request.
+	replies, err := c.Call(ctx, protocol.GetHWInfo())
+	if err != nil {
+		t.Fatalf("GetHWInfo: %v", err)
+	}
+	if _, err := protocol.HWInfoFromMessages(replies); err != nil {
+		t.Fatalf("GetHWInfo reply = %#v: %v", replies, err)
+	}
+}
+
 func containsSystemStateBroadcast(msgs []protocol.Message) bool {
 	for _, msg := range msgs {
 		if protocol.IsSystemStateDataChanged(msg) {
