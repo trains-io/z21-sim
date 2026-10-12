@@ -66,6 +66,22 @@ Flags:
 | `-grpc-addr` | `127.0.0.1:50051` | gRPC control listen address (`""` disables gRPC) |
 | `-trace` | `false` | Dump LAN and gRPC traffic to stderr |
 
+Identity flags set what the simulator reports about itself; they are fixed for the life of the process:
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `-serial` | `999` + six digits from the start time | Serial number (`LAN_GET_SERIAL_NUMBER`); the `999` prefix tells simulators from real hardware |
+| `-hw-type` | `z21` | Hardware type (`LAN_GET_HWINFO`): `z21`, `z21-old`, `z21-small`, `z21-start`, `z21-xl`, `smartrail`, or a number such as `0x0211` |
+| `-firmware` | `1.20` | Firmware version `major.minor` (`LAN_GET_HWINFO` and `LAN_X_GET_FIRMWARE_VERSION`) |
+| `-code` | `none` | Lock code (`LAN_GET_CODE`): `none`, `start-locked`, `start-unlocked` |
+| `-capabilities` | `0x31` | Capabilities byte in `LAN_SYSTEMSTATE_DATACHANGED` (spec §2.18), decimal or `0x` hex |
+
+For example, a locked z21 start:
+
+```bash
+./bin/z21-sim -hw-type z21-start -firmware 1.43 -code start-locked -serial 123456
+```
+
 Trace mode is helpful when debugging control-plane injections:
 
 ```bash

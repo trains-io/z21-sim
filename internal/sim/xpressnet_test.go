@@ -7,14 +7,21 @@ import (
 )
 
 func TestXFirmwareReply(t *testing.T) {
-	s := &Server{}
-	reply := s.xFirmwareReply()
-
-	fw, err := protocol.ParseXFirmware(reply.Data)
-	if err != nil {
-		t.Fatalf("ParseXFirmware: %v", err)
+	tests := []struct {
+		firmware uint32
+		want     string
+	}{
+		{firmware: defaultFirmware, want: "1.20"},
+		{firmware: 0x0143, want: "1.43"},
 	}
-	if got := protocol.FormatXFirmwareVersion(fw); got != "1.20" {
-		t.Fatalf("FormatXFirmwareVersion() = %q, want 1.20", got)
+	for _, tt := range tests {
+		s := &Server{identity: Identity{Firmware: tt.firmware}}
+		fw, err := protocol.ParseXFirmware(s.xFirmwareReply().Data)
+		if err != nil {
+			t.Fatalf("ParseXFirmware: %v", err)
+		}
+		if got := protocol.FormatXFirmwareVersion(fw); got != tt.want {
+			t.Fatalf("FormatXFirmwareVersion() = %q, want %s", got, tt.want)
+		}
 	}
 }

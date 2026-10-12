@@ -6,13 +6,10 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"time"
 
 	"github.com/trains-io/z21.go/protocol"
 	"github.com/trains-io/z21.go/server"
 )
-
-const defaultFirmwareVersion uint32 = 0x00000120 // BCD 1.20
 
 // Server simulates a Z21 command station on top of z21.go/server, which owns
 // the UDP transport, client sessions and broadcasts.
@@ -21,7 +18,7 @@ type Server struct {
 	log             *slog.Logger
 	traceOut        io.Writer
 	additionalAddrs []string
-	serial          uint32
+	identity        Identity
 	state           *State
 }
 
@@ -32,11 +29,11 @@ func New(addr string, log *slog.Logger, opts ...Option) (*Server, error) {
 	}
 
 	s := &Server{
-		log:    log,
-		serial: makeSimulatorSerialNumber(time.Now()),
-		state:  NewState(),
+		log:      log,
+		identity: DefaultIdentity(),
 	}
 	applyOptions(s, opts)
+	s.state = newState(s.identity.Capabilities)
 
 	serverOpts := []server.Option{server.WithHandler(s.mux()), server.WithLogger(log)}
 	if s.traceOut != nil {
@@ -133,6 +130,11 @@ func reply(build func() protocol.Message) server.Handler {
 	})
 }
 
+// Identity returns what the simulator reports about itself.
+func (s *Server) Identity() Identity {
+	return s.identity
+}
+
 func (s *Server) hwInfoReply() protocol.Message {
-	return protocol.EncodeHWInfo(protocol.HWInfo{HwType: protocol.HwTypeZ21New, FirmwareVersion: defaultFirmwareVersion})
+	return protocol.EncodeHWInfo(protocol.HWInfo{HwType: s.identity.HwType, FirmwareVersion: s.identity.Firmware})
 }

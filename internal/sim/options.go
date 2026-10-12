@@ -13,6 +13,15 @@ func WithAdditionalAddr(addr string) Option {
 	}
 }
 
+// WithIdentity sets what the simulator reports about itself (serial number,
+// hardware type, firmware, lock code, capabilities). The default is
+// DefaultIdentity.
+func WithIdentity(id Identity) Option {
+	return func(s *Server) {
+		s.identity = id
+	}
+}
+
 // WithTrace enables LAN traffic dumps to out.
 func WithTrace(out io.Writer) Option {
 	return func(s *Server) {

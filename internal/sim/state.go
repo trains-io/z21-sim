@@ -11,7 +11,6 @@ const (
 	defaultVCCVoltageMV    = 1000
 	defaultMainCurrentMA   = 100
 	defaultTemperatureC    = 42
-	defaultCapabilities    = protocol.CapabilityDCC | protocol.CapabilityLocoCmds | protocol.CapabilityAccessoryCmds
 )
 
 // Change is a broadcast caused by a state change: Messages go to the clients
@@ -33,8 +32,13 @@ type State struct {
 }
 
 // NewState returns the state of a command station that has just been powered
-// on: track power on, nominal currents and voltages, no CAN devices.
+// on: track power on, nominal currents and voltages, no CAN devices, and the
+// capabilities of DefaultIdentity.
 func NewState() *State {
+	return newState(defaultCapabilities)
+}
+
+func newState(capabilities byte) *State {
 	return &State{
 		system: protocol.SystemState{
 			MainCurrent:         defaultMainCurrentMA,
@@ -42,7 +46,7 @@ func NewState() *State {
 			Temperature:         defaultTemperatureC,
 			SupplyVoltage:       defaultSupplyVoltageMV,
 			VCCVoltage:          defaultVCCVoltageMV,
-			Capabilities:        defaultCapabilities,
+			Capabilities:        capabilities,
 		},
 		canDevices: make(map[uint16]CANDevice),
 	}

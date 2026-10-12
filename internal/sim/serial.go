@@ -15,9 +15,9 @@ func makeSimulatorSerialNumber(now time.Time) uint32 {
 }
 
 func (s *Server) serialReply() protocol.Message {
-	return protocol.EncodeSerialNumber(s.serial)
+	return protocol.EncodeSerialNumber(s.identity.Serial)
 }
 
 func (s *Server) codeReply() protocol.Message {
-	return protocol.EncodeCode(protocol.CodeNoLock)
+	return protocol.EncodeCode(s.identity.Code)
 }

@@ -13,8 +13,6 @@ const (
 	xHeaderSetStop           byte = 0x80
 	xCommandGetFirmware      byte = 0xF1
 	xFirmwareDB0             byte = 0x0A
-	defaultXFirmwareMSB      byte = 0x01
-	defaultXFirmwareLSB      byte = 0x20 // BCD 1.20
 )
 
 // trackPowerHandler switches track power; the requester always gets the track
@@ -43,8 +41,10 @@ func confirmAndNotify(w server.ResponseWriter, c server.Client, changes []Change
 	notify(w, c, changes)
 }
 
+// xFirmwareReply reports the same version as LAN_GET_HWINFO, as a real Z21
+// does.
 func (s *Server) xFirmwareReply() protocol.Message {
-	return protocol.EncodeXFirmware(protocol.XFirmware{VersionMSB: defaultXFirmwareMSB, VersionLSB: defaultXFirmwareLSB})
+	return protocol.EncodeXFirmware(protocol.XFirmware{VersionMSB: byte(s.identity.Firmware >> 8), VersionLSB: byte(s.identity.Firmware)})
 }
 
 func (s *Server) xStatusReply() protocol.Message {
