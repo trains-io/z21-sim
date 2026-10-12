@@ -2,6 +2,7 @@ package sim_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -179,5 +180,36 @@ func TestCANBoosterTrackPower(t *testing.T) {
 	}
 	if !protocol.HasCANBoosterState(states[0].State, protocol.CANBoosterStateTrackVoltageOff) {
 		t.Fatalf("state = %#x, want TrackVoltageOff", states[0].State)
+	}
+}
+
+func TestBuildCANDeviceRejectsInvalidParameters(t *testing.T) {
+	tests := []struct {
+		name                              string
+		netID                             uint32
+		kind                              sim.CANDeviceKind
+		devName                           string
+		moduleAddr, portCount, outputPort uint32
+	}{
+		{name: "net_id zero", netID: 0, kind: sim.CANDeviceDetector},
+		{name: "net_id above 16 bits", netID: 0x10000, kind: sim.CANDeviceDetector},
+		{name: "name too long", netID: 1, kind: sim.CANDeviceBooster, devName: "sixteen chars!!!"},
+		{name: "module_addr above 16 bits", netID: 1, kind: sim.CANDeviceDetector, moduleAddr: 0x10000},
+		{name: "port_count above 256", netID: 1, kind: sim.CANDeviceDetector, portCount: 257},
+		{name: "output_port above 16 bits", netID: 1, kind: sim.CANDeviceBooster, outputPort: 0x10000},
+		{name: "unknown kind", netID: 1, kind: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := sim.BuildCANDevice(tt.netID, tt.kind, tt.devName, tt.moduleAddr, tt.portCount, tt.outputPort)
+			if !errors.Is(err, sim.ErrInvalidCANDevice) {
+				t.Fatalf("BuildCANDevice error = %v, want ErrInvalidCANDevice", err)
+			}
+		})
+	}
+
+	device, err := sim.BuildCANDevice(0xFFFF, sim.CANDeviceDetector, "fifteen chars!!", 0xFFFF, 256, 0)
+	if err != nil || len(device.Ports) != 256 {
+		t.Fatalf("BuildCANDevice at the limits = %+v, %v; want 256 ports", device, err)
 	}
 }

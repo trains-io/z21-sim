@@ -111,7 +111,7 @@ func (g *Server) NotifyCANDeviceDetected(_ context.Context, req *simctlv1.Notify
 
 	kind, err := canDeviceKindFromProto(req.GetKind())
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	device, err := sim.BuildCANDevice(
@@ -122,6 +122,9 @@ func (g *Server) NotifyCANDeviceDetected(_ context.Context, req *simctlv1.Notify
 		req.GetPortCount(),
 		req.GetOutputPort(),
 	)
+	if errors.Is(err, sim.ErrInvalidCANDevice) {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	if err != nil {
 		return nil, err
 	}

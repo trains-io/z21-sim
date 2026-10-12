@@ -549,6 +549,29 @@ func TestGRPCShortCircuit(t *testing.T) {
 	}
 }
 
+func TestGRPCNotifyCANDeviceDetectedInvalid(t *testing.T) {
+	simulator, _ := startSimulator(t)
+	control := startControl(t, simulator)
+
+	tests := []struct {
+		name string
+		req  *simctlv1.NotifyCANDeviceDetectedRequest
+	}{
+		{name: "kind unspecified", req: &simctlv1.NotifyCANDeviceDetectedRequest{NetId: 1}},
+		{name: "net_id zero", req: &simctlv1.NotifyCANDeviceDetectedRequest{Kind: simctlv1.CANDeviceKind_CAN_DEVICE_KIND_BOOSTER}},
+		{name: "port_count too large", req: &simctlv1.NotifyCANDeviceDetectedRequest{NetId: 1, Kind: simctlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR, PortCount: 257}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if _, err := control.NotifyCANDeviceDetected(ctx, tt.req); status.Code(err) != codes.InvalidArgument {
+				t.Fatalf("NotifyCANDeviceDetected error = %v, want InvalidArgument", err)
+			}
+		})
+	}
+}
+
 func TestGRPCSetSystemStateOutOfRange(t *testing.T) {
 	simulator, _ := startSimulator(t)
 	control := startControl(t, simulator)

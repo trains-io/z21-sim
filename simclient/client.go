@@ -89,6 +89,56 @@ func (c *Client) ShortCircuit(ctx context.Context, kind ShortCircuitKind) (chang
 	return resp.GetChanged(), nil
 }
 
+// CANDetector is a CAN occupancy detector to add (spec §10.1).
+type CANDetector struct {
+	NetID      uint16 // CAN network ID, not 0
+	Name       string // at most 15 bytes
+	ModuleAddr uint16 // 0 means 1
+	PortCount  uint16 // 0 means 1; at most 256
+}
+
+// AddCANDetector registers a detector, as if it had just been plugged in,
+// and sends its occupancy reports (all ports free, with voltage) to the
+// CAN detector subscribers. It returns how many were notified. Adding a
+// detector with the NetID of an existing device replaces that device.
+func (c *Client) AddCANDetector(ctx context.Context, d CANDetector) (recipients int, err error) {
+	resp, err := c.svc.NotifyCANDeviceDetected(ctx, &simctlv1.NotifyCANDeviceDetectedRequest{
+		NetId:      uint32(d.NetID),
+		Kind:       simctlv1.CANDeviceKind_CAN_DEVICE_KIND_DETECTOR,
+		Name:       d.Name,
+		ModuleAddr: uint32(d.ModuleAddr),
+		PortCount:  uint32(d.PortCount),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("simclient: add CAN detector: %w", err)
+	}
+	return int(resp.GetRecipientCount()), nil
+}
+
+// CANBooster is a CAN booster to add (spec §10.2).
+type CANBooster struct {
+	NetID      uint16 // CAN network ID, not 0
+	Name       string // at most 15 bytes
+	OutputPort uint16 // 0 means 1
+}
+
+// AddCANBooster registers a booster, as if it had just been plugged in, and
+// sends its system state to the CAN booster subscribers. It returns how
+// many were notified. Adding a booster with the NetID of an existing device
+// replaces that device.
+func (c *Client) AddCANBooster(ctx context.Context, b CANBooster) (recipients int, err error) {
+	resp, err := c.svc.NotifyCANDeviceDetected(ctx, &simctlv1.NotifyCANDeviceDetectedRequest{
+		NetId:      uint32(b.NetID),
+		Kind:       simctlv1.CANDeviceKind_CAN_DEVICE_KIND_BOOSTER,
+		Name:       b.Name,
+		OutputPort: uint32(b.OutputPort),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("simclient: add CAN booster: %w", err)
+	}
+	return int(resp.GetRecipientCount()), nil
+}
+
 // BroadcastSystemState sends the current system state to the system-state
 // subscribers and returns how many were notified.
 func (c *Client) BroadcastSystemState(ctx context.Context) (recipients int, err error) {

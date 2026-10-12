@@ -156,6 +156,56 @@ func TestShortCircuit(t *testing.T) {
 	}
 }
 
+func TestCANAddDetector(t *testing.T) {
+	udpAddr, addr := startSimulator(t)
+	c := subscribe(t, udpAddr, protocol.BroadcastFlagCANDetector)
+
+	out := mustRun(t, "--addr", addr, "can", "add", "detector", "0xdb04", "--name", "Block 4", "--module-addr", "0x3c", "--ports", "3")
+	if want := "detector 0xdb04 added, sent to 1 client\n"; out != want {
+		t.Fatalf("output = %q, want %q", out, want)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	reports, err := protocol.CANDetectorReportsFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("CANDetectorReportsFromMessages: %v", err)
+	}
+	if len(reports) != 3 {
+		t.Fatalf("got %d reports, want one per port (3): %+v", len(reports), reports)
+	}
+	for i, r := range reports {
+		if r.NetID != 0xdb04 || r.Addr != 60 || int(r.Port) != i {
+			t.Fatalf("report %d = %+v, want NetID 0xdb04, module address 60, port %d", i, r, i)
+		}
+	}
+}
+
+func TestCANAddBooster(t *testing.T) {
+	udpAddr, addr := startSimulator(t)
+	c := subscribe(t, udpAddr, protocol.BroadcastFlagCANBooster)
+
+	out := mustRun(t, "--addr", addr, "-o", "json", "can", "add", "booster", "49409", "--output-port", "2")
+	if want := "{\n  \"kind\": \"booster\",\n  \"net_id\": 49409,\n  \"recipients\": 1\n}\n"; out != want {
+		t.Fatalf("output = %q, want %q", out, want)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	states, err := protocol.CANBoosterSystemStatesFromMessages(msgs)
+	if err != nil || len(states) != 1 || states[0].NetID != 0xc101 || states[0].OutputPort != 2 {
+		t.Fatalf("booster states = %+v, err=%v; want NetID 0xc101 on output port 2", states, err)
+	}
+}
+
 func TestSystemSet(t *testing.T) {
 	udpAddr, addr := startSimulator(t)
 	c := subscribe(t, udpAddr, protocol.BroadcastFlagSystemState)
@@ -249,6 +299,12 @@ func TestErrors(t *testing.T) {
 		{name: "system set without values", args: []string{"system", "set"}, wantErr: "no values given"},
 		{name: "system set out of range", args: []string{"system", "set", "--temperature", "40000"}, wantErr: "out of range"},
 		{name: "system set negative voltage", args: []string{"system", "set", "--vcc-voltage", "-1"}, wantErr: "invalid argument"},
+		{name: "can add detector without NETID", args: []string{"can", "add", "detector"}, wantErr: "accepts 1 arg"},
+		{name: "can add detector NETID zero", args: []string{"can", "add", "detector", "0"}, wantErr: "invalid NETID"},
+		{name: "can add detector NETID not a number", args: []string{"can", "add", "detector", "block4"}, wantErr: "invalid NETID"},
+		{name: "can add detector NETID too large", args: []string{"can", "add", "detector", "0x10000"}, wantErr: "invalid NETID"},
+		{name: "can add detector too many ports", args: []string{"can", "add", "detector", "1", "--ports", "300"}, wantErr: "port_count 300 out of range"},
+		{name: "can add booster name too long", args: []string{"can", "add", "booster", "1", "--name", "a name that is too long"}, wantErr: "longer than 15 bytes"},
 		{name: "unreachable simulator", args: []string{"--addr", "127.0.0.1:1", "--timeout", "200ms", "power", "on"}, wantErr: "set track power"},
 	}
 	for _, tt := range tests {
