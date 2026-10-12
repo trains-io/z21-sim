@@ -1,0 +1,13 @@
+version: v2
+modules:
+  - path: api
+lint:
+  use:
+    - STANDARD
+  except:
+    # The proto package is trains.io.z21.simctl.v1, but the files live in
+    # api/simctl/v1 so that the directory matches the Go import path.
+    - PACKAGE_DIRECTORY_MATCH
+breaking:
+  use:
+    - FILE

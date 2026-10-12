@@ -1,4 +1,4 @@
-.PHONY: help build clean run run-trace check fmt-check vet test tidy proto docker-build docker-run docker-stop test-integration
+.PHONY: help build clean run run-trace check fmt-check vet test tidy proto proto-lint proto-breaking docker-build docker-run docker-stop test-integration
 
 .DEFAULT_GOAL := help
 
@@ -9,6 +9,7 @@ GRPC_ADDR ?= 127.0.0.1:50051
 IMAGE ?= ghcr.io/trains-io/z21-sim
 TAG ?= local
 CONTAINER ?= z21-sim
+BUF_AGAINST ?= .git\#branch=main,subdir=api
 export Z21_TESTSERVER_IMAGE ?= $(IMAGE):$(TAG)
 
 help: ## Show targets
@@ -19,6 +20,12 @@ proto: ## Regenerate gRPC code from api/simctl/v1/simctl.proto
 	protoc --go_out=. --go_opt=module=github.com/trains-io/z21-sim \
 		--go-grpc_out=. --go-grpc_opt=module=github.com/trains-io/z21-sim \
 		api/simctl/v1/simctl.proto
+
+proto-lint: ## Lint the control API with buf
+	buf lint
+
+proto-breaking: ## Fail on incompatible control API changes against BUF_AGAINST (default: main)
+	buf breaking --against '$(BUF_AGAINST)'
 
 build: ## Compile binary to bin/
 	go build -o $(BIN) ./cmd/z21-sim
