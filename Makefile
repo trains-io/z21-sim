@@ -3,6 +3,7 @@
 .DEFAULT_GOAL := help
 
 BIN := bin/z21-sim
+CTL_BIN := bin/z21-sim-ctl
 ADDR ?= 127.0.0.1:21105
 ALT_ADDR ?= 127.0.0.1:21106
 GRPC_ADDR ?= 127.0.0.1:50051
@@ -25,8 +26,9 @@ proto-lint: ## Lint the control API with buf
 proto-breaking: ## Fail on incompatible control API changes against BUF_AGAINST (default: main)
 	buf breaking --against '$(BUF_AGAINST)'
 
-build: ## Compile binary to bin/
+build: ## Compile z21-sim and z21-sim-ctl to bin/
 	go build -o $(BIN) ./cmd/z21-sim
+	go build -o $(CTL_BIN) ./cmd/z21-sim-ctl
 
 clean: ## Remove build artifacts in bin/
 	rm -rf bin/

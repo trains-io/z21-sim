@@ -8,8 +8,10 @@ RUN go mod download
 COPY api ./api
 COPY cmd ./cmd
 COPY internal ./internal
+COPY simclient ./simclient
 
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /z21-sim ./cmd/z21-sim
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /z21-sim ./cmd/z21-sim && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /z21-sim-ctl ./cmd/z21-sim-ctl
 
 FROM debian:bookworm-slim
 RUN apt-get update && \
@@ -17,6 +19,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /z21-sim /usr/local/bin/z21-sim
+COPY --from=builder /z21-sim-ctl /usr/local/bin/z21-sim-ctl
 
 EXPOSE 21105/udp
 EXPOSE 21106/udp
