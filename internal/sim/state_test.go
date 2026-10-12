@@ -130,6 +130,50 @@ func TestStateSetEmergencyStop(t *testing.T) {
 	}
 }
 
+func TestStateSetShortCircuit(t *testing.T) {
+	st := sim.NewState()
+	const shortAndOff = protocol.CentralStateShortCircuit | protocol.CentralStateTrackVoltageOff
+
+	changes := st.SetShortCircuit(sim.ShortCircuitInternal)
+	system := st.System()
+	if system.CentralState != shortAndOff || system.CentralStateEx != protocol.CentralStateExShortCircuitInternal {
+		t.Fatalf("central state = %#x, ex = %#x; want short circuit with track voltage off, internal", system.CentralState, system.CentralStateEx)
+	}
+	if system.MainCurrent != 0 || system.VCCVoltage != 0 {
+		t.Fatalf("system state = %+v, want no current and no track voltage", system)
+	}
+	if len(changes) != 2 {
+		t.Fatalf("got %d changes, want X-Bus and system state: %+v", len(changes), changes)
+	}
+	xbus := changes[0]
+	if xbus.Flag != protocol.BroadcastFlagXpressNet || len(xbus.Messages) != 2 || !protocol.IsBCShortCircuit(xbus.Messages[0].Data) {
+		t.Fatalf("X-Bus change = %+v, want LAN_X_BC_TRACK_SHORT_CIRCUIT and X status", xbus)
+	}
+	if status, err := protocol.ParseXStatus(xbus.Messages[1].Data); err != nil || status.CentralState != shortAndOff {
+		t.Fatalf("X status = %+v, err=%v; want %#x", status, err, shortAndOff)
+	}
+	if state, err := protocol.ParseSystemState(changes[1].Messages[0].Data); err != nil || state != system {
+		t.Fatalf("system state broadcast = %+v, err=%v; want %+v", state, err, system)
+	}
+
+	if again := st.SetShortCircuit(sim.ShortCircuitInternal); again != nil {
+		t.Fatalf("SetShortCircuit(internal) again = %+v, want no changes", again)
+	}
+	if changes := st.SetShortCircuit(sim.ShortCircuitExternal); len(changes) != 2 {
+		t.Fatalf("SetShortCircuit(external) after internal = %+v, want broadcasts", changes)
+	}
+	if ex := st.System().CentralStateEx; ex != protocol.CentralStateExShortCircuitExternal {
+		t.Fatalf("CentralStateEx = %#x, want external only", ex)
+	}
+
+	if changes := st.SetTrackPower(true); len(changes) != 2 {
+		t.Fatalf("SetTrackPower(true) = %+v, want broadcasts", changes)
+	}
+	if system := st.System(); system.CentralState != 0 || system.CentralStateEx != 0 || system.MainCurrent == 0 {
+		t.Fatalf("system state after track power on = %+v, want short circuit ended and current back", system)
+	}
+}
+
 func TestStateSetTrackPower(t *testing.T) {
 	tests := []struct {
 		name         string

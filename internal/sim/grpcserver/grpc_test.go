@@ -485,6 +485,70 @@ func TestGRPCEmergencyStop(t *testing.T) {
 	}
 }
 
+func TestGRPCShortCircuit(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	c, err := client.Dial(udpAddr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet|protocol.BroadcastFlagSystemState)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	tests := []struct {
+		kind        simctlv1.ShortCircuitKind
+		wantChanged bool
+	}{
+		{kind: simctlv1.ShortCircuitKind_SHORT_CIRCUIT_KIND_EXTERNAL, wantChanged: true},
+		{kind: simctlv1.ShortCircuitKind_SHORT_CIRCUIT_KIND_EXTERNAL, wantChanged: false},
+	}
+	for i, tt := range tests {
+		resp, err := control.ShortCircuit(ctx, &simctlv1.ShortCircuitRequest{Kind: tt.kind})
+		if err != nil {
+			t.Fatalf("ShortCircuit #%d: %v", i+1, err)
+		}
+		if resp.GetChanged() != tt.wantChanged {
+			t.Fatalf("ShortCircuit #%d changed = %v, want %v", i+1, resp.GetChanged(), tt.wantChanged)
+		}
+	}
+
+	var msgs []protocol.Message
+	for !containsSystemStateBroadcast(msgs) {
+		packet, err := c.ReadPacket(ctx)
+		if err != nil {
+			t.Fatalf("ReadPacket: %v (got %#v)", err, msgs)
+		}
+		msgs = append(msgs, packet...)
+	}
+	var shorts int
+	for _, msg := range msgs {
+		if protocol.IsBCShortCircuit(msg.Data) {
+			shorts++
+		}
+	}
+	if shorts != 1 {
+		t.Fatalf("subscriber got %#v, want LAN_X_BC_TRACK_SHORT_CIRCUIT once", msgs)
+	}
+	state, err := protocol.SystemStateFromMessages(msgs)
+	if err != nil || state.CentralStateEx != protocol.CentralStateExShortCircuitExternal {
+		t.Fatalf("system state = %+v, err=%v; want external short circuit", state, err)
+	}
+
+	if _, err := control.ShortCircuit(ctx, &simctlv1.ShortCircuitRequest{Kind: 99}); status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("ShortCircuit(kind 99) error = %v, want InvalidArgument", err)
+	}
+}
+
 func TestGRPCSetSystemStateOutOfRange(t *testing.T) {
 	simulator, _ := startSimulator(t)
 	control := startControl(t, simulator)

@@ -41,7 +41,8 @@ func (c *Client) Close() error {
 }
 
 // SetTrackPower switches track power on or off and reports whether the
-// state changed. Switching it on also ends an emergency stop. Subscribed
+// state changed. Switching it on also ends an emergency stop and a short
+// circuit. Subscribed
 // clients are notified of a change.
 func (c *Client) SetTrackPower(ctx context.Context, on bool) (changed bool, err error) {
 	resp, err := c.svc.SetTrackPower(ctx, &simctlv1.SetTrackPowerRequest{On: on})
@@ -58,6 +59,32 @@ func (c *Client) EmergencyStop(ctx context.Context) (changed bool, err error) {
 	resp, err := c.svc.EmergencyStop(ctx, &simctlv1.EmergencyStopRequest{})
 	if err != nil {
 		return false, fmt.Errorf("simclient: emergency stop: %w", err)
+	}
+	return resp.GetChanged(), nil
+}
+
+// ShortCircuitKind tells where a short circuit happened.
+type ShortCircuitKind int
+
+const (
+	// ShortCircuitInternal is a short on the Z21's own main or programming
+	// track output.
+	ShortCircuitInternal ShortCircuitKind = iota
+	// ShortCircuitExternal is a short on the output of an external booster.
+	ShortCircuitExternal
+)
+
+// ShortCircuit reports a short circuit, which switches the track voltage
+// off. It reports whether the state changed. SetTrackPower(ctx, true) ends
+// it.
+func (c *Client) ShortCircuit(ctx context.Context, kind ShortCircuitKind) (changed bool, err error) {
+	pk := simctlv1.ShortCircuitKind_SHORT_CIRCUIT_KIND_INTERNAL
+	if kind == ShortCircuitExternal {
+		pk = simctlv1.ShortCircuitKind_SHORT_CIRCUIT_KIND_EXTERNAL
+	}
+	resp, err := c.svc.ShortCircuit(ctx, &simctlv1.ShortCircuitRequest{Kind: pk})
+	if err != nil {
+		return false, fmt.Errorf("simclient: short circuit: %w", err)
 	}
 	return resp.GetChanged(), nil
 }

@@ -74,6 +74,15 @@ func (s *Server) EmergencyStop() bool {
 	return len(changes) > 0
 }
 
+// ShortCircuit reports a short circuit of the given kind, which switches the
+// track voltage off, and broadcasts it to all subscribed clients if the state
+// changed. It reports whether the state changed. Used by the control API.
+func (s *Server) ShortCircuit(kind ShortCircuitKind) bool {
+	changes := s.state.SetShortCircuit(kind)
+	s.broadcast(changes)
+	return len(changes) > 0
+}
+
 // SetTrackPowerAndNotify switches track power and, if that changed the state,
 // broadcasts the change to all subscribed clients. Used by the control API.
 func (s *Server) SetTrackPowerAndNotify(on bool) bool {

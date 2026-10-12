@@ -14,7 +14,7 @@ service SimulatorService {
 
   // SetTrackPower updates simulator track power and emits unsolicited XpressNet
   // and system-state broadcasts to subscribed clients. Switching it on also
-  // ends an emergency stop.
+  // ends an emergency stop and a short circuit.
   rpc SetTrackPower(SetTrackPowerRequest) returns (SetTrackPowerResponse);
 
   // NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
@@ -42,6 +42,32 @@ service SimulatorService {
   // LAN_X_BC_STOPPED and LAN_X_STATUS_CHANGED, and system-state subscribers
   // the new system state. SetTrackPower with on = true ends it.
   rpc EmergencyStop(EmergencyStopRequest) returns (EmergencyStopResponse);
+
+  // ShortCircuit reports a short circuit, which switches the track voltage
+  // off. If that changes the state, X-Bus subscribers get
+  // LAN_X_BC_TRACK_SHORT_CIRCUIT and LAN_X_STATUS_CHANGED, and system-state
+  // subscribers the new system state, whose CentralStateEx tells internal and
+  // external shorts apart. SetTrackPower with on = true ends it.
+  rpc ShortCircuit(ShortCircuitRequest) returns (ShortCircuitResponse);
+}
+
+// ShortCircuitKind tells where a short circuit happened.
+enum ShortCircuitKind {
+  // Treated as SHORT_CIRCUIT_KIND_INTERNAL.
+  SHORT_CIRCUIT_KIND_UNSPECIFIED = 0;
+  // On the Z21's own main or programming track output.
+  SHORT_CIRCUIT_KIND_INTERNAL = 1;
+  // On the output of an external booster.
+  SHORT_CIRCUIT_KIND_EXTERNAL = 2;
+}
+
+message ShortCircuitRequest {
+  ShortCircuitKind kind = 1;
+}
+
+message ShortCircuitResponse {
+  // Whether the state changed: no short circuit of this kind was active.
+  bool changed = 1;
 }
 
 message EmergencyStopRequest {}

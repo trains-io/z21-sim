@@ -18,7 +18,7 @@ func newPowerCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:       "power on|off",
 		Short:     "Switch track power on or off",
-		Long:      "Switch track power on or off. X-Bus subscribers get LAN_X_BC_TRACK_POWER_ON/OFF,\nsystem-state subscribers get LAN_SYSTEMSTATE_DATACHANGED. \"power on\" also ends\nan emergency stop.",
+		Long:      "Switch track power on or off. X-Bus subscribers get LAN_X_BC_TRACK_POWER_ON/OFF,\nsystem-state subscribers get LAN_SYSTEMSTATE_DATACHANGED. \"power on\" also ends\nan emergency stop and a short circuit.",
 		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		ValidArgs: []string{"on", "off"},
 		RunE: func(cmd *cobra.Command, args []string) error {

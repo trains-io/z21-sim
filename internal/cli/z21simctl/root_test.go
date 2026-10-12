@@ -137,6 +137,25 @@ func TestStop(t *testing.T) {
 	}
 }
 
+func TestShortCircuit(t *testing.T) {
+	_, addr := startSimulator(t)
+
+	tests := []struct {
+		args []string
+		want string
+	}{
+		{args: []string{"short-circuit"}, want: "short circuit (internal)\n"},
+		{args: []string{"short-circuit"}, want: "short circuit (internal) (unchanged)\n"},
+		{args: []string{"-o", "json", "short-circuit", "--external"}, want: "{\n  \"kind\": \"external\",\n  \"changed\": true\n}\n"},
+		{args: []string{"power", "on"}, want: "track power on\n"},
+	}
+	for _, tt := range tests {
+		if got := mustRun(t, append([]string{"--addr", addr}, tt.args...)...); got != tt.want {
+			t.Errorf("z21-sim-ctl %s = %q, want %q", strings.Join(tt.args, " "), got, tt.want)
+		}
+	}
+}
+
 func TestSystemSet(t *testing.T) {
 	udpAddr, addr := startSimulator(t)
 	c := subscribe(t, udpAddr, protocol.BroadcastFlagSystemState)

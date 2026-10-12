@@ -26,6 +26,7 @@ const (
 	SimulatorService_ListClients_FullMethodName             = "/trains.io.z21.simctl.v1.SimulatorService/ListClients"
 	SimulatorService_SetSystemState_FullMethodName          = "/trains.io.z21.simctl.v1.SimulatorService/SetSystemState"
 	SimulatorService_EmergencyStop_FullMethodName           = "/trains.io.z21.simctl.v1.SimulatorService/EmergencyStop"
+	SimulatorService_ShortCircuit_FullMethodName            = "/trains.io.z21.simctl.v1.SimulatorService/ShortCircuit"
 )
 
 // SimulatorServiceClient is the client API for SimulatorService service.
@@ -39,7 +40,7 @@ type SimulatorServiceClient interface {
 	BroadcastSystemState(ctx context.Context, in *BroadcastSystemStateRequest, opts ...grpc.CallOption) (*BroadcastSystemStateResponse, error)
 	// SetTrackPower updates simulator track power and emits unsolicited XpressNet
 	// and system-state broadcasts to subscribed clients. Switching it on also
-	// ends an emergency stop.
+	// ends an emergency stop and a short circuit.
 	SetTrackPower(ctx context.Context, in *SetTrackPowerRequest, opts ...grpc.CallOption) (*SetTrackPowerResponse, error)
 	// NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
 	// status to subscribed clients, emulating hot-plug detection.
@@ -62,6 +63,12 @@ type SimulatorServiceClient interface {
 	// LAN_X_BC_STOPPED and LAN_X_STATUS_CHANGED, and system-state subscribers
 	// the new system state. SetTrackPower with on = true ends it.
 	EmergencyStop(ctx context.Context, in *EmergencyStopRequest, opts ...grpc.CallOption) (*EmergencyStopResponse, error)
+	// ShortCircuit reports a short circuit, which switches the track voltage
+	// off. If that changes the state, X-Bus subscribers get
+	// LAN_X_BC_TRACK_SHORT_CIRCUIT and LAN_X_STATUS_CHANGED, and system-state
+	// subscribers the new system state, whose CentralStateEx tells internal and
+	// external shorts apart. SetTrackPower with on = true ends it.
+	ShortCircuit(ctx context.Context, in *ShortCircuitRequest, opts ...grpc.CallOption) (*ShortCircuitResponse, error)
 }
 
 type simulatorServiceClient struct {
@@ -142,6 +149,16 @@ func (c *simulatorServiceClient) EmergencyStop(ctx context.Context, in *Emergenc
 	return out, nil
 }
 
+func (c *simulatorServiceClient) ShortCircuit(ctx context.Context, in *ShortCircuitRequest, opts ...grpc.CallOption) (*ShortCircuitResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ShortCircuitResponse)
+	err := c.cc.Invoke(ctx, SimulatorService_ShortCircuit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SimulatorServiceServer is the server API for SimulatorService service.
 // All implementations must embed UnimplementedSimulatorServiceServer
 // for forward compatibility.
@@ -153,7 +170,7 @@ type SimulatorServiceServer interface {
 	BroadcastSystemState(context.Context, *BroadcastSystemStateRequest) (*BroadcastSystemStateResponse, error)
 	// SetTrackPower updates simulator track power and emits unsolicited XpressNet
 	// and system-state broadcasts to subscribed clients. Switching it on also
-	// ends an emergency stop.
+	// ends an emergency stop and a short circuit.
 	SetTrackPower(context.Context, *SetTrackPowerRequest) (*SetTrackPowerResponse, error)
 	// NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
 	// status to subscribed clients, emulating hot-plug detection.
@@ -176,6 +193,12 @@ type SimulatorServiceServer interface {
 	// LAN_X_BC_STOPPED and LAN_X_STATUS_CHANGED, and system-state subscribers
 	// the new system state. SetTrackPower with on = true ends it.
 	EmergencyStop(context.Context, *EmergencyStopRequest) (*EmergencyStopResponse, error)
+	// ShortCircuit reports a short circuit, which switches the track voltage
+	// off. If that changes the state, X-Bus subscribers get
+	// LAN_X_BC_TRACK_SHORT_CIRCUIT and LAN_X_STATUS_CHANGED, and system-state
+	// subscribers the new system state, whose CentralStateEx tells internal and
+	// external shorts apart. SetTrackPower with on = true ends it.
+	ShortCircuit(context.Context, *ShortCircuitRequest) (*ShortCircuitResponse, error)
 	mustEmbedUnimplementedSimulatorServiceServer()
 }
 
@@ -206,6 +229,9 @@ func (UnimplementedSimulatorServiceServer) SetSystemState(context.Context, *SetS
 }
 func (UnimplementedSimulatorServiceServer) EmergencyStop(context.Context, *EmergencyStopRequest) (*EmergencyStopResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EmergencyStop not implemented")
+}
+func (UnimplementedSimulatorServiceServer) ShortCircuit(context.Context, *ShortCircuitRequest) (*ShortCircuitResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ShortCircuit not implemented")
 }
 func (UnimplementedSimulatorServiceServer) mustEmbedUnimplementedSimulatorServiceServer() {}
 func (UnimplementedSimulatorServiceServer) testEmbeddedByValue()                          {}
@@ -354,6 +380,24 @@ func _SimulatorService_EmergencyStop_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SimulatorService_ShortCircuit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShortCircuitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SimulatorServiceServer).ShortCircuit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SimulatorService_ShortCircuit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SimulatorServiceServer).ShortCircuit(ctx, req.(*ShortCircuitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SimulatorService_ServiceDesc is the grpc.ServiceDesc for SimulatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -388,6 +432,10 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EmergencyStop",
 			Handler:    _SimulatorService_EmergencyStop_Handler,
+		},
+		{
+			MethodName: "ShortCircuit",
+			Handler:    _SimulatorService_ShortCircuit_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

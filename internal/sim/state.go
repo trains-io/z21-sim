@@ -140,39 +140,77 @@ func (st *State) SetEmergencyStop() []Change {
 	if system.CentralState == before {
 		return nil
 	}
-	return []Change{
-		{Flag: protocol.BroadcastFlagXpressNet, Messages: []protocol.Message{
-			protocol.EncodeBCStopped(),
-			protocol.EncodeXStatus(protocol.XStatus{CentralState: system.CentralState}),
-		}},
-		systemStateChange(system),
+	return []Change{xBusChange(protocol.EncodeBCStopped(), system), systemStateChange(system)}
+}
+
+// ShortCircuitKind tells where a short circuit happened (spec §2.18,
+// CentralStateEx).
+type ShortCircuitKind int
+
+const (
+	// ShortCircuitInternal is a short on the Z21's own main or programming
+	// track output.
+	ShortCircuitInternal ShortCircuitKind = iota
+	// ShortCircuitExternal is a short on the output of an external booster.
+	ShortCircuitExternal
+)
+
+const shortCircuitExFlags = protocol.CentralStateExShortCircuitInternal | protocol.CentralStateExShortCircuitExternal
+
+// SetShortCircuit reports a short circuit: the track voltage goes off and
+// stays off until track power is switched on. If that changes the state,
+// X-Bus subscribers get LAN_X_BC_TRACK_SHORT_CIRCUIT and the X status, and
+// system-state subscribers the new system state, which tells internal and
+// external shorts apart.
+func (st *State) SetShortCircuit(kind ShortCircuitKind) []Change {
+	exFlag := protocol.CentralStateExShortCircuitInternal
+	if kind == ShortCircuitExternal {
+		exFlag = protocol.CentralStateExShortCircuitExternal
 	}
+
+	st.mu.Lock()
+	before := st.system
+	st.system.CentralState |= protocol.CentralStateShortCircuit | protocol.CentralStateTrackVoltageOff
+	st.system.CentralStateEx = st.system.CentralStateEx&^shortCircuitExFlags | exFlag
+	changed := st.system != before
+	system := st.reportedLocked()
+	st.mu.Unlock()
+
+	if !changed {
+		return nil
+	}
+	return []Change{xBusChange(protocol.EncodeBCShortCircuit(), system), systemStateChange(system)}
+}
+
+// xBusChange is an X-Bus broadcast followed by the X status of system.
+func xBusChange(bc protocol.Message, system protocol.SystemState) Change {
+	return Change{Flag: protocol.BroadcastFlagXpressNet, Messages: []protocol.Message{
+		bc,
+		protocol.EncodeXStatus(protocol.XStatus{CentralState: system.CentralState}),
+	}}
 }
 
 // SetTrackPower switches the track voltage. Switching it on also ends an
-// emergency stop, a short circuit and programming mode; switching it off
+// emergency stop, a short circuit (including its internal/external flag in
+// CentralStateEx) and programming mode; switching it off
 // keeps an emergency stop. If that changes the state, X-Bus subscribers are
 // told the new track power and X status, and system-state subscribers the
 // new system state.
 func (st *State) SetTrackPower(on bool) []Change {
 	st.mu.Lock()
-	before := st.system.CentralState
+	before := st.system
 	if on {
 		st.system.CentralState &^= trackPowerOnClears
+		st.system.CentralStateEx &^= shortCircuitExFlags
 	} else {
 		st.system.CentralState |= protocol.CentralStateTrackVoltageOff
 	}
+	changed := st.system != before
 	system := st.reportedLocked()
 	st.mu.Unlock()
 
-	if system.CentralState == before {
+	if !changed {
 		return nil
 	}
-	return []Change{
-		{Flag: protocol.BroadcastFlagXpressNet, Messages: []protocol.Message{
-			protocol.EncodeTrackPowerBC(on),
-			protocol.EncodeXStatus(protocol.XStatus{CentralState: system.CentralState}),
-		}},
-		systemStateChange(system),
-	}
+	return []Change{xBusChange(protocol.EncodeTrackPowerBC(on), system), systemStateChange(system)}
 }

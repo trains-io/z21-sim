@@ -183,6 +183,19 @@ func (g *Server) EmergencyStop(context.Context, *simctlv1.EmergencyStopRequest) 
 	return &simctlv1.EmergencyStopResponse{Changed: g.sim.EmergencyStop()}, nil
 }
 
+func (g *Server) ShortCircuit(_ context.Context, req *simctlv1.ShortCircuitRequest) (*simctlv1.ShortCircuitResponse, error) {
+	var kind sim.ShortCircuitKind
+	switch req.GetKind() {
+	case simctlv1.ShortCircuitKind_SHORT_CIRCUIT_KIND_UNSPECIFIED, simctlv1.ShortCircuitKind_SHORT_CIRCUIT_KIND_INTERNAL:
+		kind = sim.ShortCircuitInternal
+	case simctlv1.ShortCircuitKind_SHORT_CIRCUIT_KIND_EXTERNAL:
+		kind = sim.ShortCircuitExternal
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "unknown short circuit kind %d", req.GetKind())
+	}
+	return &simctlv1.ShortCircuitResponse{Changed: g.sim.ShortCircuit(kind)}, nil
+}
+
 func int16Field(errs []error, name string, v *int32) (*int16, []error) {
 	if v == nil {
 		return nil, errs
