@@ -16,42 +16,17 @@ const (
 	defaultXFirmwareLSB      byte = 0x20 // BCD 1.20
 )
 
-// trackPowerHandler switches track power. The requester gets the track power
-// broadcast as reply; other X-Bus subscribers get it with the new X status, and
-// system-state subscribers get the new system state. A requester subscribed to
-// system state gets it in its reply packet, so it arrives with the reply.
+// trackPowerHandler switches track power. The requester always gets the track
+// power broadcast as reply: through notify when the state changed and it is an
+// X-Bus subscriber, directly otherwise.
 func (s *Server) trackPowerHandler(on bool) server.Handler {
 	return server.HandlerFunc(func(w server.ResponseWriter, r *server.Request) {
-		w.Reply(protocol.EncodeTrackPowerBC(on))
-		if !s.setTrackPower(on) {
-			return
+		changes := s.state.SetTrackPower(on)
+		if len(changes) == 0 || r.Client.BroadcastFlags&protocol.BroadcastFlagXpressNet == 0 {
+			w.Reply(protocol.EncodeTrackPowerBC(on))
 		}
-		w.Broadcast(protocol.BroadcastFlagXpressNet, protocol.EncodeTrackPowerBC(on), s.xStatusReply())
-		state := s.systemStateReply()
-		w.Broadcast(protocol.BroadcastFlagSystemState, state)
-		if r.Client.BroadcastFlags&protocol.BroadcastFlagSystemState != 0 {
-			w.Reply(state)
-		}
+		notify(w, r.Client, changes)
 	})
-}
-
-func (s *Server) setTrackPower(on bool) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.trackPower == on {
-		return false
-	}
-	s.trackPower = on
-	return true
-}
-
-func (s *Server) centralState() byte {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.trackPower {
-		return 0
-	}
-	return centralStateTrackVoltageOff
 }
 
 func (s *Server) xFirmwareReply() protocol.Message {
@@ -59,5 +34,9 @@ func (s *Server) xFirmwareReply() protocol.Message {
 }
 
 func (s *Server) xStatusReply() protocol.Message {
-	return protocol.EncodeXStatus(protocol.XStatus{CentralState: s.centralState()})
+	return protocol.EncodeXStatus(protocol.XStatus{CentralState: s.state.System().CentralState})
+}
+
+func (s *Server) systemStateReply() protocol.Message {
+	return protocol.EncodeSystemState(s.state.System())
 }

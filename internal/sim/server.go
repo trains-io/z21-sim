@@ -23,9 +23,9 @@ type Server struct {
 	traceOut        io.Writer
 	additionalAddrs []string
 	serial          uint32
+	state           *State
 
 	mu         sync.Mutex
-	trackPower bool
 	canDevices map[uint16]CANDevice
 }
 
@@ -38,7 +38,7 @@ func New(addr string, log *slog.Logger, opts ...Option) (*Server, error) {
 	s := &Server{
 		log:        log,
 		serial:     makeSimulatorSerialNumber(time.Now()),
-		trackPower: true,
+		state:      NewState(),
 		canDevices: make(map[uint16]CANDevice),
 	}
 	applyOptions(s, opts)

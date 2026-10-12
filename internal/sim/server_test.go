@@ -419,6 +419,42 @@ func TestTrackPowerChangeBroadcastsToPeer(t *testing.T) {
 	}
 }
 
+func TestTrackPowerReplyForXBusSubscriber(t *testing.T) {
+	_, addr := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if err := c.Send(ctx, protocol.SetTrackPower(false)); err != nil {
+		t.Fatalf("SetTrackPower: %v", err)
+	}
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	var trackPower, xStatus int
+	for _, msg := range msgs {
+		if containsTrackPowerBC([]protocol.Message{msg}, false) {
+			trackPower++
+		}
+		if status, err := protocol.ParseXStatus(msg.Data); err == nil && status.CentralState == protocol.CentralStateTrackVoltageOff {
+			xStatus++
+		}
+	}
+	if trackPower != 1 || xStatus != 1 || len(msgs) != 2 {
+		t.Fatalf("reply = %#v, want track power off and X status once each", msgs)
+	}
+}
+
 func TestAlternatePortSharesSessions(t *testing.T) {
 	srv, addr := startTestServer(t, sim.WithAdditionalAddr("127.0.0.1:0"))
 	addrs := srv.Addrs()
