@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/trains-io/z21.go/protocol"
@@ -24,9 +23,6 @@ type Server struct {
 	additionalAddrs []string
 	serial          uint32
 	state           *State
-
-	mu         sync.Mutex
-	canDevices map[uint16]CANDevice
 }
 
 // New binds a UDP listener on addr (for example "0.0.0.0:21105" or "127.0.0.1:0").
@@ -36,10 +32,9 @@ func New(addr string, log *slog.Logger, opts ...Option) (*Server, error) {
 	}
 
 	s := &Server{
-		log:        log,
-		serial:     makeSimulatorSerialNumber(time.Now()),
-		state:      NewState(),
-		canDevices: make(map[uint16]CANDevice),
+		log:    log,
+		serial: makeSimulatorSerialNumber(time.Now()),
+		state:  NewState(),
 	}
 	applyOptions(s, opts)
 

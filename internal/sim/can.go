@@ -2,6 +2,7 @@ package sim
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/trains-io/z21.go/protocol"
 	"github.com/trains-io/z21.go/server"
@@ -32,6 +33,11 @@ type CANDevice struct {
 	State      uint16
 	VCCmV      uint16
 	CurrentmA  uint16
+}
+
+func (d CANDevice) clone() CANDevice {
+	d.Ports = slices.Clone(d.Ports)
+	return d
 }
 
 func newDetectorDevice(netID uint16, name string, moduleAddr, portCount uint16) CANDevice {
@@ -68,31 +74,25 @@ func newBoosterDevice(netID uint16, name string, outputPort uint16) CANDevice {
 	}
 }
 
-// RegisterCANDevice stores or replaces a CAN device in the simulator registry.
-func (s *Server) RegisterCANDevice(device CANDevice) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.canDevices == nil {
-		s.canDevices = make(map[uint16]CANDevice)
+// BuildCANDevice constructs a CAN device from control-plane parameters.
+func BuildCANDevice(netID uint32, kind CANDeviceKind, name string, moduleAddr, portCount, outputPort uint32) (CANDevice, error) {
+	if netID == 0 || netID > 0xFFFF {
+		return CANDevice{}, fmt.Errorf("z21-sim: net_id out of range")
 	}
-	s.canDevices[device.NetID] = device
-}
-
-// NotifyCANDeviceDetected registers a device and broadcasts its initial status.
-func (s *Server) NotifyCANDeviceDetected(device CANDevice) int {
-	s.RegisterCANDevice(device)
-	return s.broadcastCANDeviceDetected(device)
-}
-
-func (s *Server) broadcastCANDeviceDetected(device CANDevice) int {
-	switch device.Kind {
+	switch kind {
 	case CANDeviceDetector:
-		return s.z21.Broadcast(protocol.BroadcastFlagCANDetector, s.detectorReports(device)...)
+		return newDetectorDevice(uint16(netID), name, uint16(moduleAddr), uint16(portCount)), nil
 	case CANDeviceBooster:
-		return s.z21.Broadcast(protocol.BroadcastFlagCANBooster, s.boosterSystemStateMessage(device))
+		return newBoosterDevice(uint16(netID), name, uint16(outputPort)), nil
 	default:
-		return 0
+		return CANDevice{}, fmt.Errorf("z21-sim: unsupported CAN device kind")
 	}
+}
+
+// NotifyCANDeviceDetected adds device and broadcasts its initial status. It
+// returns the number of clients notified. Used by the control API.
+func (s *Server) NotifyCANDeviceDetected(device CANDevice) int {
+	return s.broadcast(s.state.AddCANDevice(device))
 }
 
 func (s *Server) serveCAN(w server.ResponseWriter, r *server.Request) {
@@ -107,176 +107,62 @@ func (s *Server) serveCAN(w server.ResponseWriter, r *server.Request) {
 func (s *Server) handleCAN(msg protocol.Message) ([]protocol.Message, bool) {
 	switch msg.Header {
 	case protocol.HeaderLANCANDeviceGetDescription:
-		return s.handleCANDeviceGetDescription(msg.Data)
+		netID, err := protocol.ParseGetCANDeviceDescription(msg.Data)
+		if err != nil {
+			return nil, false
+		}
+		device, _ := s.state.CANDevice(netID)
+		return []protocol.Message{protocol.EncodeCANDeviceDescription(netID, device.Name)}, true
+
 	case protocol.HeaderLANCANDeviceSetDescription:
-		return s.handleCANDeviceSetDescription(msg.Data)
+		netID, name, err := protocol.ParseSetCANDeviceDescription(msg.Data)
+		if err != nil {
+			return nil, false
+		}
+		s.state.SetCANDeviceName(netID, name)
+		return nil, true
+
 	case protocol.HeaderLANCANDetector:
-		return s.handleCANDetectorPoll(msg.Data)
+		netID, err := protocol.ParseGetCANDetector(msg.Data)
+		if err != nil {
+			return nil, false
+		}
+		var reports []protocol.Message
+		for _, device := range s.polledDetectors(netID) {
+			reports = append(reports, canDetectorReports(device)...)
+		}
+		return reports, true
+
 	case protocol.HeaderLANCANMaintenance:
-		s.handleCANMaintenance(msg.Data)
+		if netID, moduleAddr, _, err := protocol.ParseCANMaintenanceSetAddress(msg.Data); err == nil {
+			s.state.SetCANDetectorAddr(netID, moduleAddr)
+		}
 		return nil, true
+
 	case protocol.HeaderLANCANBoosterSetTrackPower:
-		return s.handleCANBoosterSetTrackPower(msg.Data)
+		netID, power, err := protocol.ParseSetCANBoosterTrackPower(msg.Data)
+		if err != nil {
+			return nil, false
+		}
+		device, ok := s.state.SetCANBoosterTrackPower(netID, power)
+		if !ok {
+			return nil, true
+		}
+		return []protocol.Message{canBoosterState(device)}, true
+
 	default:
 		return nil, false
 	}
 }
 
-func (s *Server) handleCANDeviceGetDescription(data []byte) ([]protocol.Message, bool) {
-	netID, err := protocol.ParseGetCANDeviceDescription(data)
-	if err != nil {
-		return nil, false
-	}
-	device, ok := s.canDevice(netID)
-	name := ""
-	if ok {
-		name = device.Name
-	}
-	return []protocol.Message{protocol.EncodeCANDeviceDescription(netID, name)}, true
-}
-
-func (s *Server) handleCANDeviceSetDescription(data []byte) ([]protocol.Message, bool) {
-	netID, name, err := protocol.ParseSetCANDeviceDescription(data)
-	if err != nil {
-		return nil, false
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.canDevices == nil {
-		s.canDevices = make(map[uint16]CANDevice)
-	}
-	device, ok := s.canDevices[netID]
-	if !ok {
-		device = CANDevice{NetID: netID, Name: name}
-	} else {
-		device.Name = name
-	}
-	s.canDevices[netID] = device
-	return nil, true
-}
-
-func (s *Server) handleCANDetectorPoll(data []byte) ([]protocol.Message, bool) {
-	netID, err := protocol.ParseGetCANDetector(data)
-	if err != nil {
-		return nil, false
-	}
-
-	var devices []CANDevice
+// polledDetectors returns the detectors a LAN_CAN_DETECTOR poll for netID
+// asks about.
+func (s *Server) polledDetectors(netID uint16) []CANDevice {
 	if netID == protocol.CANDetectorPollAll {
-		devices = s.detectorDevices()
-	} else if device, ok := s.canDevice(netID); ok && device.Kind == CANDeviceDetector {
-		devices = []CANDevice{device}
+		return s.state.CANDetectors()
 	}
-
-	if len(devices) == 0 {
-		return nil, true
+	if device, ok := s.state.CANDevice(netID); ok && device.Kind == CANDeviceDetector {
+		return []CANDevice{device}
 	}
-
-	reports := make([]protocol.Message, 0)
-	for _, device := range devices {
-		for _, report := range s.detectorReports(device) {
-			reports = append(reports, report)
-		}
-	}
-	return reports, true
-}
-
-func (s *Server) handleCANMaintenance(data []byte) {
-	netID, moduleAddr, _, err := protocol.ParseCANMaintenanceSetAddress(data)
-	if err != nil {
-		return
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	device, ok := s.canDevices[netID]
-	if !ok || device.Kind != CANDeviceDetector {
-		return
-	}
-	device.ModuleAddr = moduleAddr
-	s.canDevices[netID] = device
-}
-
-func (s *Server) handleCANBoosterSetTrackPower(data []byte) ([]protocol.Message, bool) {
-	netID, power, err := protocol.ParseSetCANBoosterTrackPower(data)
-	if err != nil {
-		return nil, false
-	}
-
-	s.mu.Lock()
-	device, ok := s.canDevices[netID]
-	if !ok || device.Kind != CANDeviceBooster {
-		s.mu.Unlock()
-		return nil, true
-	}
-
-	switch power {
-	case protocol.CANBoosterTrackPowerActivateAll, protocol.CANBoosterTrackPowerActivateOut1, protocol.CANBoosterTrackPowerActivateOut2:
-		device.State &^= protocol.CANBoosterStateTrackVoltageOff
-	case protocol.CANBoosterTrackPowerDeactivateAll, protocol.CANBoosterTrackPowerDeactivateOut1, protocol.CANBoosterTrackPowerDeactivateOut2:
-		device.State |= protocol.CANBoosterStateTrackVoltageOff
-	}
-	s.canDevices[netID] = device
-	s.mu.Unlock()
-
-	reply := s.boosterSystemStateMessage(device)
-	return []protocol.Message{reply}, true
-}
-
-func (s *Server) canDevice(netID uint16) (CANDevice, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	device, ok := s.canDevices[netID]
-	return device, ok
-}
-
-func (s *Server) detectorDevices() []CANDevice {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []CANDevice
-	for _, device := range s.canDevices {
-		if device.Kind == CANDeviceDetector {
-			out = append(out, device)
-		}
-	}
-	return out
-}
-
-func (s *Server) detectorReports(device CANDevice) []protocol.Message {
-	reports := make([]protocol.Message, 0, len(device.Ports))
-	for port, value := range device.Ports {
-		reports = append(reports, protocol.EncodeCANDetector(protocol.CANDetectorReport{
-			NetID:  device.NetID,
-			Addr:   device.ModuleAddr,
-			Port:   uint8(port),
-			Type:   protocol.CANDetectorTypeOccupancy,
-			Value1: value,
-		}))
-	}
-	return reports
-}
-
-func (s *Server) boosterSystemStateMessage(device CANDevice) protocol.Message {
-	return protocol.EncodeCANBoosterSystemState(protocol.CANBoosterSystemState{
-		NetID:      device.NetID,
-		OutputPort: device.OutputPort,
-		State:      device.State,
-		VCCVoltage: device.VCCmV,
-		Current:    device.CurrentmA,
-	})
-}
-
-// BuildCANDevice constructs a CAN device from control-plane parameters.
-func BuildCANDevice(netID uint32, kind CANDeviceKind, name string, moduleAddr, portCount, outputPort uint32) (CANDevice, error) {
-	if netID == 0 || netID > 0xFFFF {
-		return CANDevice{}, fmt.Errorf("z21-sim: net_id out of range")
-	}
-	switch kind {
-	case CANDeviceDetector:
-		return newDetectorDevice(uint16(netID), name, uint16(moduleAddr), uint16(portCount)), nil
-	case CANDeviceBooster:
-		return newBoosterDevice(uint16(netID), name, uint16(outputPort)), nil
-	default:
-		return CANDevice{}, fmt.Errorf("z21-sim: unsupported CAN device kind")
-	}
+	return nil
 }

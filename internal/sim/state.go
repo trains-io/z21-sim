@@ -25,21 +25,25 @@ type Change struct {
 // API change it through its methods, which return the broadcasts the change
 // causes, so both produce the same broadcasts. It is safe for concurrent use.
 type State struct {
-	mu     sync.Mutex
-	system protocol.SystemState
+	mu         sync.Mutex
+	system     protocol.SystemState
+	canDevices map[uint16]CANDevice
 }
 
 // NewState returns the state of a command station that has just been powered
-// on: track power on, nominal currents and voltages.
+// on: track power on, nominal currents and voltages, no CAN devices.
 func NewState() *State {
-	return &State{system: protocol.SystemState{
-		MainCurrent:         defaultMainCurrentMA,
-		FilteredMainCurrent: defaultMainCurrentMA - 20,
-		Temperature:         defaultTemperatureC,
-		SupplyVoltage:       defaultSupplyVoltageMV,
-		VCCVoltage:          defaultVCCVoltageMV,
-		Capabilities:        defaultCapabilities,
-	}}
+	return &State{
+		system: protocol.SystemState{
+			MainCurrent:         defaultMainCurrentMA,
+			FilteredMainCurrent: defaultMainCurrentMA - 20,
+			Temperature:         defaultTemperatureC,
+			SupplyVoltage:       defaultSupplyVoltageMV,
+			VCCVoltage:          defaultVCCVoltageMV,
+			Capabilities:        defaultCapabilities,
+		},
+		canDevices: make(map[uint16]CANDevice),
+	}
 }
 
 // System returns the system state as reported by LAN_SYSTEMSTATE_DATACHANGED.

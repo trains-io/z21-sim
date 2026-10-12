@@ -18,11 +18,14 @@ func notify(w server.ResponseWriter, c server.Client, changes []Change) {
 }
 
 // broadcast sends changes that do not come from a client request, for example
-// from the control API, to all subscribers.
-func (s *Server) broadcast(changes []Change) {
+// from the control API, to all subscribers. It returns the number of packets
+// sent, which is the number of clients notified for a single change.
+func (s *Server) broadcast(changes []Change) int {
+	sent := 0
 	for _, ch := range changes {
-		s.z21.Broadcast(ch.Flag, ch.Messages...)
+		sent += s.z21.Broadcast(ch.Flag, ch.Messages...)
 	}
+	return sent
 }
 
 // BroadcastSystemState sends LAN_SYSTEMSTATE_DATACHANGED to all clients
