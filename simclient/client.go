@@ -40,12 +40,24 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-// SetTrackPower switches track power on or off and reports whether it
-// changed. Subscribed clients are notified of a change.
+// SetTrackPower switches track power on or off and reports whether the
+// state changed. Switching it on also ends an emergency stop. Subscribed
+// clients are notified of a change.
 func (c *Client) SetTrackPower(ctx context.Context, on bool) (changed bool, err error) {
 	resp, err := c.svc.SetTrackPower(ctx, &simctlv1.SetTrackPowerRequest{On: on})
 	if err != nil {
 		return false, fmt.Errorf("simclient: set track power: %w", err)
+	}
+	return resp.GetChanged(), nil
+}
+
+// EmergencyStop stops all locos; the track voltage stays as it is. It
+// reports whether no emergency stop was active before. SetTrackPower(ctx,
+// true) ends it.
+func (c *Client) EmergencyStop(ctx context.Context) (changed bool, err error) {
+	resp, err := c.svc.EmergencyStop(ctx, &simctlv1.EmergencyStopRequest{})
+	if err != nil {
+		return false, fmt.Errorf("simclient: emergency stop: %w", err)
 	}
 	return resp.GetChanged(), nil
 }

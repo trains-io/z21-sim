@@ -56,6 +56,7 @@ func NewRootCmd() *cobra.Command {
 
 	root.AddCommand(
 		newPowerCmd(a),
+		newStopCmd(a),
 		newSystemCmd(a),
 		newClientsCmd(a),
 	)

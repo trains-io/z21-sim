@@ -446,6 +446,45 @@ func TestGRPCSetSystemState(t *testing.T) {
 	}
 }
 
+func TestGRPCEmergencyStop(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	c, err := client.Dial(udpAddr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	for i, wantChanged := range []bool{true, false} {
+		resp, err := control.EmergencyStop(ctx, &simctlv1.EmergencyStopRequest{})
+		if err != nil {
+			t.Fatalf("EmergencyStop #%d: %v", i+1, err)
+		}
+		if resp.GetChanged() != wantChanged {
+			t.Fatalf("EmergencyStop #%d changed = %v, want %v", i+1, resp.GetChanged(), wantChanged)
+		}
+	}
+
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	if err := protocol.BCStoppedFromMessages(msgs); err != nil {
+		t.Fatalf("subscriber got %#v: %v", msgs, err)
+	}
+}
+
 func TestGRPCSetSystemStateOutOfRange(t *testing.T) {
 	simulator, _ := startSimulator(t)
 	control := startControl(t, simulator)

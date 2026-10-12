@@ -179,6 +179,10 @@ func (g *Server) SetSystemState(_ context.Context, req *simctlv1.SetSystemStateR
 	return &simctlv1.SetSystemStateResponse{Changed: changed, RecipientCount: int32(count)}, nil
 }
 
+func (g *Server) EmergencyStop(context.Context, *simctlv1.EmergencyStopRequest) (*simctlv1.EmergencyStopResponse, error) {
+	return &simctlv1.EmergencyStopResponse{Changed: g.sim.EmergencyStop()}, nil
+}
+
 func int16Field(errs []error, name string, v *int32) (*int16, []error) {
 	if v == nil {
 		return nil, errs

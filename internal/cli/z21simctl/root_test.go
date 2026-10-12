@@ -108,6 +108,35 @@ func TestPower(t *testing.T) {
 	}
 }
 
+func TestStop(t *testing.T) {
+	udpAddr, addr := startSimulator(t)
+	c := subscribe(t, udpAddr, protocol.BroadcastFlagXpressNet)
+
+	tests := []struct {
+		args []string
+		want string
+	}{
+		{args: []string{"stop"}, want: "emergency stop\n"},
+		{args: []string{"-o", "json", "stop"}, want: "{\n  \"changed\": false\n}\n"},
+		{args: []string{"power", "on"}, want: "track power on\n"},
+	}
+	for _, tt := range tests {
+		if got := mustRun(t, append([]string{"--addr", addr}, tt.args...)...); got != tt.want {
+			t.Errorf("z21-sim-ctl %s = %q, want %q", strings.Join(tt.args, " "), got, tt.want)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	if err := protocol.BCStoppedFromMessages(msgs); err != nil {
+		t.Fatalf("subscriber got %#v: %v", msgs, err)
+	}
+}
+
 func TestSystemSet(t *testing.T) {
 	udpAddr, addr := startSimulator(t)
 	c := subscribe(t, udpAddr, protocol.BroadcastFlagSystemState)

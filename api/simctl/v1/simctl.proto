@@ -13,7 +13,8 @@ service SimulatorService {
   rpc BroadcastSystemState(BroadcastSystemStateRequest) returns (BroadcastSystemStateResponse);
 
   // SetTrackPower updates simulator track power and emits unsolicited XpressNet
-  // and system-state broadcasts to subscribed clients.
+  // and system-state broadcasts to subscribed clients. Switching it on also
+  // ends an emergency stop.
   rpc SetTrackPower(SetTrackPowerRequest) returns (SetTrackPowerResponse);
 
   // NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
@@ -35,6 +36,19 @@ service SimulatorService {
   // state. While track power is off, the currents and the VCC voltage are
   // reported as zero; values set meanwhile are reported once power is on.
   rpc SetSystemState(SetSystemStateRequest) returns (SetSystemStateResponse);
+
+  // EmergencyStop stops all locos, like LAN_X_SET_STOP; the track voltage
+  // stays as it is. If no emergency stop was active, X-Bus subscribers get
+  // LAN_X_BC_STOPPED and LAN_X_STATUS_CHANGED, and system-state subscribers
+  // the new system state. SetTrackPower with on = true ends it.
+  rpc EmergencyStop(EmergencyStopRequest) returns (EmergencyStopResponse);
+}
+
+message EmergencyStopRequest {}
+
+message EmergencyStopResponse {
+  // Whether no emergency stop was active before.
+  bool changed = 1;
 }
 
 message BroadcastSystemStateRequest {}

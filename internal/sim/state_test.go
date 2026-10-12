@@ -87,6 +87,49 @@ func TestStateTrackPowerOffReportsNoLoad(t *testing.T) {
 	}
 }
 
+func TestStateSetEmergencyStop(t *testing.T) {
+	st := sim.NewState()
+
+	changes := st.SetEmergencyStop()
+	if !st.EmergencyStopped() || !st.TrackPower() {
+		t.Fatalf("EmergencyStopped() = %v, TrackPower() = %v; want stopped with track voltage on", st.EmergencyStopped(), st.TrackPower())
+	}
+	if len(changes) != 2 {
+		t.Fatalf("got %d changes, want X-Bus and system state: %+v", len(changes), changes)
+	}
+	xbus := changes[0]
+	if xbus.Flag != protocol.BroadcastFlagXpressNet || len(xbus.Messages) != 2 || !protocol.IsBCStopped(xbus.Messages[0].Data) {
+		t.Fatalf("X-Bus change = %+v, want LAN_X_BC_STOPPED and X status", xbus)
+	}
+	if status, err := protocol.ParseXStatus(xbus.Messages[1].Data); err != nil || status.CentralState != protocol.CentralStateEmergencyStop {
+		t.Fatalf("X status = %+v, err=%v; want emergency stop only", status, err)
+	}
+	if state, err := protocol.ParseSystemState(changes[1].Messages[0].Data); err != nil || state != st.System() {
+		t.Fatalf("system state broadcast = %+v, err=%v; want %+v", state, err, st.System())
+	}
+	if again := st.SetEmergencyStop(); again != nil {
+		t.Fatalf("SetEmergencyStop again = %+v, want no changes", again)
+	}
+
+	st.SetTrackPower(false)
+	if got := st.System().CentralState; got != protocol.CentralStateEmergencyStop|protocol.CentralStateTrackVoltageOff {
+		t.Fatalf("central state after power off = %#x, want emergency stop kept and track voltage off", got)
+	}
+
+	if changes := st.SetTrackPower(true); len(changes) != 2 || !st.TrackPower() || st.EmergencyStopped() {
+		t.Fatalf("SetTrackPower(true) = %+v, central state %#x; want power on, emergency stop ended", changes, st.System().CentralState)
+	}
+
+	st.SetEmergencyStop()
+	changes = st.SetTrackPower(true)
+	if len(changes) != 2 || st.EmergencyStopped() {
+		t.Fatalf("SetTrackPower(true) with power already on = %+v, stopped %v; want emergency stop ended and broadcast", changes, st.EmergencyStopped())
+	}
+	if on, err := protocol.ParseTrackPowerBC(changes[0].Messages[0].Data); err != nil || !on {
+		t.Fatalf("track power broadcast = %v, err=%v; want LAN_X_BC_TRACK_POWER_ON", on, err)
+	}
+}
+
 func TestStateSetTrackPower(t *testing.T) {
 	tests := []struct {
 		name         string

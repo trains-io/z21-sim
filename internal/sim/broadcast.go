@@ -65,6 +65,15 @@ func (s *Server) SetSystemValues(v SystemValues) (changed bool, recipients int) 
 	return len(changes) > 0, s.broadcast(changes)
 }
 
+// EmergencyStop stops all locos and, if no emergency stop was active,
+// broadcasts it to all subscribed clients. It reports whether the state
+// changed. Used by the control API.
+func (s *Server) EmergencyStop() bool {
+	changes := s.state.SetEmergencyStop()
+	s.broadcast(changes)
+	return len(changes) > 0
+}
+
 // SetTrackPowerAndNotify switches track power and, if that changed the state,
 // broadcasts the change to all subscribed clients. Used by the control API.
 func (s *Server) SetTrackPowerAndNotify(on bool) bool {

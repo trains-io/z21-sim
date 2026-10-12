@@ -71,6 +71,87 @@ func (CANDeviceKind) EnumDescriptor() ([]byte, []int) {
 	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{0}
 }
 
+type EmergencyStopRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmergencyStopRequest) Reset() {
+	*x = EmergencyStopRequest{}
+	mi := &file_simctl_v1_simctl_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmergencyStopRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmergencyStopRequest) ProtoMessage() {}
+
+func (x *EmergencyStopRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_simctl_v1_simctl_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmergencyStopRequest.ProtoReflect.Descriptor instead.
+func (*EmergencyStopRequest) Descriptor() ([]byte, []int) {
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{0}
+}
+
+type EmergencyStopResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Whether no emergency stop was active before.
+	Changed       bool `protobuf:"varint,1,opt,name=changed,proto3" json:"changed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmergencyStopResponse) Reset() {
+	*x = EmergencyStopResponse{}
+	mi := &file_simctl_v1_simctl_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmergencyStopResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmergencyStopResponse) ProtoMessage() {}
+
+func (x *EmergencyStopResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_simctl_v1_simctl_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmergencyStopResponse.ProtoReflect.Descriptor instead.
+func (*EmergencyStopResponse) Descriptor() ([]byte, []int) {
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *EmergencyStopResponse) GetChanged() bool {
+	if x != nil {
+		return x.Changed
+	}
+	return false
+}
+
 type BroadcastSystemStateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -79,7 +160,7 @@ type BroadcastSystemStateRequest struct {
 
 func (x *BroadcastSystemStateRequest) Reset() {
 	*x = BroadcastSystemStateRequest{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[0]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -91,7 +172,7 @@ func (x *BroadcastSystemStateRequest) String() string {
 func (*BroadcastSystemStateRequest) ProtoMessage() {}
 
 func (x *BroadcastSystemStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[0]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -104,7 +185,7 @@ func (x *BroadcastSystemStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BroadcastSystemStateRequest.ProtoReflect.Descriptor instead.
 func (*BroadcastSystemStateRequest) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{0}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{2}
 }
 
 type BroadcastSystemStateResponse struct {
@@ -116,7 +197,7 @@ type BroadcastSystemStateResponse struct {
 
 func (x *BroadcastSystemStateResponse) Reset() {
 	*x = BroadcastSystemStateResponse{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[1]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -128,7 +209,7 @@ func (x *BroadcastSystemStateResponse) String() string {
 func (*BroadcastSystemStateResponse) ProtoMessage() {}
 
 func (x *BroadcastSystemStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[1]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -141,7 +222,7 @@ func (x *BroadcastSystemStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BroadcastSystemStateResponse.ProtoReflect.Descriptor instead.
 func (*BroadcastSystemStateResponse) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{1}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *BroadcastSystemStateResponse) GetRecipientCount() int32 {
@@ -160,7 +241,7 @@ type SetTrackPowerRequest struct {
 
 func (x *SetTrackPowerRequest) Reset() {
 	*x = SetTrackPowerRequest{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[2]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -172,7 +253,7 @@ func (x *SetTrackPowerRequest) String() string {
 func (*SetTrackPowerRequest) ProtoMessage() {}
 
 func (x *SetTrackPowerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[2]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -185,7 +266,7 @@ func (x *SetTrackPowerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetTrackPowerRequest.ProtoReflect.Descriptor instead.
 func (*SetTrackPowerRequest) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{2}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SetTrackPowerRequest) GetOn() bool {
@@ -205,7 +286,7 @@ type SetTrackPowerResponse struct {
 
 func (x *SetTrackPowerResponse) Reset() {
 	*x = SetTrackPowerResponse{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[3]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -217,7 +298,7 @@ func (x *SetTrackPowerResponse) String() string {
 func (*SetTrackPowerResponse) ProtoMessage() {}
 
 func (x *SetTrackPowerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[3]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -230,7 +311,7 @@ func (x *SetTrackPowerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetTrackPowerResponse.ProtoReflect.Descriptor instead.
 func (*SetTrackPowerResponse) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{3}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SetTrackPowerResponse) GetOn() bool {
@@ -261,7 +342,7 @@ type NotifyCANDeviceDetectedRequest struct {
 
 func (x *NotifyCANDeviceDetectedRequest) Reset() {
 	*x = NotifyCANDeviceDetectedRequest{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[4]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -273,7 +354,7 @@ func (x *NotifyCANDeviceDetectedRequest) String() string {
 func (*NotifyCANDeviceDetectedRequest) ProtoMessage() {}
 
 func (x *NotifyCANDeviceDetectedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[4]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -286,7 +367,7 @@ func (x *NotifyCANDeviceDetectedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotifyCANDeviceDetectedRequest.ProtoReflect.Descriptor instead.
 func (*NotifyCANDeviceDetectedRequest) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{4}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *NotifyCANDeviceDetectedRequest) GetNetId() uint32 {
@@ -340,7 +421,7 @@ type NotifyCANDeviceDetectedResponse struct {
 
 func (x *NotifyCANDeviceDetectedResponse) Reset() {
 	*x = NotifyCANDeviceDetectedResponse{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[5]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -352,7 +433,7 @@ func (x *NotifyCANDeviceDetectedResponse) String() string {
 func (*NotifyCANDeviceDetectedResponse) ProtoMessage() {}
 
 func (x *NotifyCANDeviceDetectedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[5]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -365,7 +446,7 @@ func (x *NotifyCANDeviceDetectedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotifyCANDeviceDetectedResponse.ProtoReflect.Descriptor instead.
 func (*NotifyCANDeviceDetectedResponse) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{5}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *NotifyCANDeviceDetectedResponse) GetRecipientCount() int32 {
@@ -389,7 +470,7 @@ type InjectRawRequest struct {
 
 func (x *InjectRawRequest) Reset() {
 	*x = InjectRawRequest{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[6]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -401,7 +482,7 @@ func (x *InjectRawRequest) String() string {
 func (*InjectRawRequest) ProtoMessage() {}
 
 func (x *InjectRawRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[6]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -414,7 +495,7 @@ func (x *InjectRawRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InjectRawRequest.ProtoReflect.Descriptor instead.
 func (*InjectRawRequest) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{6}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *InjectRawRequest) GetPayload() []byte {
@@ -440,7 +521,7 @@ type InjectRawResponse struct {
 
 func (x *InjectRawResponse) Reset() {
 	*x = InjectRawResponse{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[7]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +533,7 @@ func (x *InjectRawResponse) String() string {
 func (*InjectRawResponse) ProtoMessage() {}
 
 func (x *InjectRawResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[7]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +546,7 @@ func (x *InjectRawResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InjectRawResponse.ProtoReflect.Descriptor instead.
 func (*InjectRawResponse) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{7}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *InjectRawResponse) GetRecipientCount() int32 {
@@ -483,7 +564,7 @@ type ListClientsRequest struct {
 
 func (x *ListClientsRequest) Reset() {
 	*x = ListClientsRequest{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[8]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -495,7 +576,7 @@ func (x *ListClientsRequest) String() string {
 func (*ListClientsRequest) ProtoMessage() {}
 
 func (x *ListClientsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[8]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -508,7 +589,7 @@ func (x *ListClientsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClientsRequest.ProtoReflect.Descriptor instead.
 func (*ListClientsRequest) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{8}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{10}
 }
 
 type ListClientsResponse struct {
@@ -520,7 +601,7 @@ type ListClientsResponse struct {
 
 func (x *ListClientsResponse) Reset() {
 	*x = ListClientsResponse{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[9]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -532,7 +613,7 @@ func (x *ListClientsResponse) String() string {
 func (*ListClientsResponse) ProtoMessage() {}
 
 func (x *ListClientsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[9]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -545,7 +626,7 @@ func (x *ListClientsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClientsResponse.ProtoReflect.Descriptor instead.
 func (*ListClientsResponse) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{9}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListClientsResponse) GetClients() []*Client {
@@ -577,7 +658,7 @@ type SetSystemStateRequest struct {
 
 func (x *SetSystemStateRequest) Reset() {
 	*x = SetSystemStateRequest{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -589,7 +670,7 @@ func (x *SetSystemStateRequest) String() string {
 func (*SetSystemStateRequest) ProtoMessage() {}
 
 func (x *SetSystemStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -602,7 +683,7 @@ func (x *SetSystemStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSystemStateRequest.ProtoReflect.Descriptor instead.
 func (*SetSystemStateRequest) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{10}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SetSystemStateRequest) GetMainCurrentMa() int32 {
@@ -658,7 +739,7 @@ type SetSystemStateResponse struct {
 
 func (x *SetSystemStateResponse) Reset() {
 	*x = SetSystemStateResponse{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[11]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -670,7 +751,7 @@ func (x *SetSystemStateResponse) String() string {
 func (*SetSystemStateResponse) ProtoMessage() {}
 
 func (x *SetSystemStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[11]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -683,7 +764,7 @@ func (x *SetSystemStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSystemStateResponse.ProtoReflect.Descriptor instead.
 func (*SetSystemStateResponse) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{11}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SetSystemStateResponse) GetChanged() bool {
@@ -720,7 +801,7 @@ type Client struct {
 
 func (x *Client) Reset() {
 	*x = Client{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[12]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -732,7 +813,7 @@ func (x *Client) String() string {
 func (*Client) ProtoMessage() {}
 
 func (x *Client) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[12]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -745,7 +826,7 @@ func (x *Client) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Client.ProtoReflect.Descriptor instead.
 func (*Client) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{12}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Client) GetAddr() string {
@@ -787,7 +868,10 @@ var File_simctl_v1_simctl_proto protoreflect.FileDescriptor
 
 const file_simctl_v1_simctl_proto_rawDesc = "" +
 	"\n" +
-	"\x16simctl/v1/simctl.proto\x12\x17trains.io.z21.simctl.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1d\n" +
+	"\x16simctl/v1/simctl.proto\x12\x17trains.io.z21.simctl.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x16\n" +
+	"\x14EmergencyStopRequest\"1\n" +
+	"\x15EmergencyStopResponse\x12\x18\n" +
+	"\achanged\x18\x01 \x01(\bR\achanged\"\x1d\n" +
 	"\x1bBroadcastSystemStateRequest\"G\n" +
 	"\x1cBroadcastSystemStateResponse\x12'\n" +
 	"\x0frecipient_count\x18\x01 \x01(\x05R\x0erecipientCount\"&\n" +
@@ -842,14 +926,15 @@ const file_simctl_v1_simctl_proto_rawDesc = "" +
 	"\rCANDeviceKind\x12\x1f\n" +
 	"\x1bCAN_DEVICE_KIND_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18CAN_DEVICE_KIND_DETECTOR\x10\x01\x12\x1b\n" +
-	"\x17CAN_DEVICE_KIND_BOOSTER\x10\x022\xd8\x05\n" +
+	"\x17CAN_DEVICE_KIND_BOOSTER\x10\x022\xc8\x06\n" +
 	"\x10SimulatorService\x12\x83\x01\n" +
 	"\x14BroadcastSystemState\x124.trains.io.z21.simctl.v1.BroadcastSystemStateRequest\x1a5.trains.io.z21.simctl.v1.BroadcastSystemStateResponse\x12n\n" +
 	"\rSetTrackPower\x12-.trains.io.z21.simctl.v1.SetTrackPowerRequest\x1a..trains.io.z21.simctl.v1.SetTrackPowerResponse\x12\x8c\x01\n" +
 	"\x17NotifyCANDeviceDetected\x127.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest\x1a8.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse\x12b\n" +
 	"\tInjectRaw\x12).trains.io.z21.simctl.v1.InjectRawRequest\x1a*.trains.io.z21.simctl.v1.InjectRawResponse\x12h\n" +
 	"\vListClients\x12+.trains.io.z21.simctl.v1.ListClientsRequest\x1a,.trains.io.z21.simctl.v1.ListClientsResponse\x12q\n" +
-	"\x0eSetSystemState\x12..trains.io.z21.simctl.v1.SetSystemStateRequest\x1a/.trains.io.z21.simctl.v1.SetSystemStateResponseB5Z3github.com/trains-io/z21-sim/api/simctl/v1;simctlv1b\x06proto3"
+	"\x0eSetSystemState\x12..trains.io.z21.simctl.v1.SetSystemStateRequest\x1a/.trains.io.z21.simctl.v1.SetSystemStateResponse\x12n\n" +
+	"\rEmergencyStop\x12-.trains.io.z21.simctl.v1.EmergencyStopRequest\x1a..trains.io.z21.simctl.v1.EmergencyStopResponseB5Z3github.com/trains-io/z21-sim/api/simctl/v1;simctlv1b\x06proto3"
 
 var (
 	file_simctl_v1_simctl_proto_rawDescOnce sync.Once
@@ -864,42 +949,46 @@ func file_simctl_v1_simctl_proto_rawDescGZIP() []byte {
 }
 
 var file_simctl_v1_simctl_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_simctl_v1_simctl_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_simctl_v1_simctl_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_simctl_v1_simctl_proto_goTypes = []any{
 	(CANDeviceKind)(0),                      // 0: trains.io.z21.simctl.v1.CANDeviceKind
-	(*BroadcastSystemStateRequest)(nil),     // 1: trains.io.z21.simctl.v1.BroadcastSystemStateRequest
-	(*BroadcastSystemStateResponse)(nil),    // 2: trains.io.z21.simctl.v1.BroadcastSystemStateResponse
-	(*SetTrackPowerRequest)(nil),            // 3: trains.io.z21.simctl.v1.SetTrackPowerRequest
-	(*SetTrackPowerResponse)(nil),           // 4: trains.io.z21.simctl.v1.SetTrackPowerResponse
-	(*NotifyCANDeviceDetectedRequest)(nil),  // 5: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest
-	(*NotifyCANDeviceDetectedResponse)(nil), // 6: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
-	(*InjectRawRequest)(nil),                // 7: trains.io.z21.simctl.v1.InjectRawRequest
-	(*InjectRawResponse)(nil),               // 8: trains.io.z21.simctl.v1.InjectRawResponse
-	(*ListClientsRequest)(nil),              // 9: trains.io.z21.simctl.v1.ListClientsRequest
-	(*ListClientsResponse)(nil),             // 10: trains.io.z21.simctl.v1.ListClientsResponse
-	(*SetSystemStateRequest)(nil),           // 11: trains.io.z21.simctl.v1.SetSystemStateRequest
-	(*SetSystemStateResponse)(nil),          // 12: trains.io.z21.simctl.v1.SetSystemStateResponse
-	(*Client)(nil),                          // 13: trains.io.z21.simctl.v1.Client
-	(*timestamppb.Timestamp)(nil),           // 14: google.protobuf.Timestamp
+	(*EmergencyStopRequest)(nil),            // 1: trains.io.z21.simctl.v1.EmergencyStopRequest
+	(*EmergencyStopResponse)(nil),           // 2: trains.io.z21.simctl.v1.EmergencyStopResponse
+	(*BroadcastSystemStateRequest)(nil),     // 3: trains.io.z21.simctl.v1.BroadcastSystemStateRequest
+	(*BroadcastSystemStateResponse)(nil),    // 4: trains.io.z21.simctl.v1.BroadcastSystemStateResponse
+	(*SetTrackPowerRequest)(nil),            // 5: trains.io.z21.simctl.v1.SetTrackPowerRequest
+	(*SetTrackPowerResponse)(nil),           // 6: trains.io.z21.simctl.v1.SetTrackPowerResponse
+	(*NotifyCANDeviceDetectedRequest)(nil),  // 7: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest
+	(*NotifyCANDeviceDetectedResponse)(nil), // 8: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
+	(*InjectRawRequest)(nil),                // 9: trains.io.z21.simctl.v1.InjectRawRequest
+	(*InjectRawResponse)(nil),               // 10: trains.io.z21.simctl.v1.InjectRawResponse
+	(*ListClientsRequest)(nil),              // 11: trains.io.z21.simctl.v1.ListClientsRequest
+	(*ListClientsResponse)(nil),             // 12: trains.io.z21.simctl.v1.ListClientsResponse
+	(*SetSystemStateRequest)(nil),           // 13: trains.io.z21.simctl.v1.SetSystemStateRequest
+	(*SetSystemStateResponse)(nil),          // 14: trains.io.z21.simctl.v1.SetSystemStateResponse
+	(*Client)(nil),                          // 15: trains.io.z21.simctl.v1.Client
+	(*timestamppb.Timestamp)(nil),           // 16: google.protobuf.Timestamp
 }
 var file_simctl_v1_simctl_proto_depIdxs = []int32{
 	0,  // 0: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest.kind:type_name -> trains.io.z21.simctl.v1.CANDeviceKind
-	13, // 1: trains.io.z21.simctl.v1.ListClientsResponse.clients:type_name -> trains.io.z21.simctl.v1.Client
-	14, // 2: trains.io.z21.simctl.v1.Client.last_seen:type_name -> google.protobuf.Timestamp
-	1,  // 3: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:input_type -> trains.io.z21.simctl.v1.BroadcastSystemStateRequest
-	3,  // 4: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:input_type -> trains.io.z21.simctl.v1.SetTrackPowerRequest
-	5,  // 5: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:input_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest
-	7,  // 6: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:input_type -> trains.io.z21.simctl.v1.InjectRawRequest
-	9,  // 7: trains.io.z21.simctl.v1.SimulatorService.ListClients:input_type -> trains.io.z21.simctl.v1.ListClientsRequest
-	11, // 8: trains.io.z21.simctl.v1.SimulatorService.SetSystemState:input_type -> trains.io.z21.simctl.v1.SetSystemStateRequest
-	2,  // 9: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21.simctl.v1.BroadcastSystemStateResponse
-	4,  // 10: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21.simctl.v1.SetTrackPowerResponse
-	6,  // 11: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:output_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
-	8,  // 12: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:output_type -> trains.io.z21.simctl.v1.InjectRawResponse
-	10, // 13: trains.io.z21.simctl.v1.SimulatorService.ListClients:output_type -> trains.io.z21.simctl.v1.ListClientsResponse
-	12, // 14: trains.io.z21.simctl.v1.SimulatorService.SetSystemState:output_type -> trains.io.z21.simctl.v1.SetSystemStateResponse
-	9,  // [9:15] is the sub-list for method output_type
-	3,  // [3:9] is the sub-list for method input_type
+	15, // 1: trains.io.z21.simctl.v1.ListClientsResponse.clients:type_name -> trains.io.z21.simctl.v1.Client
+	16, // 2: trains.io.z21.simctl.v1.Client.last_seen:type_name -> google.protobuf.Timestamp
+	3,  // 3: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:input_type -> trains.io.z21.simctl.v1.BroadcastSystemStateRequest
+	5,  // 4: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:input_type -> trains.io.z21.simctl.v1.SetTrackPowerRequest
+	7,  // 5: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:input_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest
+	9,  // 6: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:input_type -> trains.io.z21.simctl.v1.InjectRawRequest
+	11, // 7: trains.io.z21.simctl.v1.SimulatorService.ListClients:input_type -> trains.io.z21.simctl.v1.ListClientsRequest
+	13, // 8: trains.io.z21.simctl.v1.SimulatorService.SetSystemState:input_type -> trains.io.z21.simctl.v1.SetSystemStateRequest
+	1,  // 9: trains.io.z21.simctl.v1.SimulatorService.EmergencyStop:input_type -> trains.io.z21.simctl.v1.EmergencyStopRequest
+	4,  // 10: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21.simctl.v1.BroadcastSystemStateResponse
+	6,  // 11: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21.simctl.v1.SetTrackPowerResponse
+	8,  // 12: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:output_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
+	10, // 13: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:output_type -> trains.io.z21.simctl.v1.InjectRawResponse
+	12, // 14: trains.io.z21.simctl.v1.SimulatorService.ListClients:output_type -> trains.io.z21.simctl.v1.ListClientsResponse
+	14, // 15: trains.io.z21.simctl.v1.SimulatorService.SetSystemState:output_type -> trains.io.z21.simctl.v1.SetSystemStateResponse
+	2,  // 16: trains.io.z21.simctl.v1.SimulatorService.EmergencyStop:output_type -> trains.io.z21.simctl.v1.EmergencyStopResponse
+	10, // [10:17] is the sub-list for method output_type
+	3,  // [3:10] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -910,14 +999,14 @@ func file_simctl_v1_simctl_proto_init() {
 	if File_simctl_v1_simctl_proto != nil {
 		return
 	}
-	file_simctl_v1_simctl_proto_msgTypes[10].OneofWrappers = []any{}
+	file_simctl_v1_simctl_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_simctl_v1_simctl_proto_rawDesc), len(file_simctl_v1_simctl_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

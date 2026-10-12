@@ -114,14 +114,51 @@ func systemStateChange(system protocol.SystemState) Change {
 	return Change{Flag: protocol.BroadcastFlagSystemState, Messages: []protocol.Message{protocol.EncodeSystemState(system)}}
 }
 
-// SetTrackPower switches the track voltage. If that changes the state, X-Bus
-// subscribers are told the new track power and X status, and system-state
-// subscribers the new system state.
+// trackPowerOnClears are the central-state flags that switching track power
+// on resets, as in ZIMO's Z21 server.
+const trackPowerOnClears = protocol.CentralStateEmergencyStop |
+	protocol.CentralStateTrackVoltageOff |
+	protocol.CentralStateShortCircuit |
+	protocol.CentralStateProgrammingMode
+
+// EmergencyStopped reports whether an emergency stop is active.
+func (st *State) EmergencyStopped() bool {
+	return st.System().CentralState&protocol.CentralStateEmergencyStop != 0
+}
+
+// SetEmergencyStop stops all locos; the track voltage stays as it is.
+// Switching track power on ends the emergency stop. If that changes the
+// state, X-Bus subscribers get LAN_X_BC_STOPPED and the X status, and
+// system-state subscribers the new system state.
+func (st *State) SetEmergencyStop() []Change {
+	st.mu.Lock()
+	before := st.system.CentralState
+	st.system.CentralState |= protocol.CentralStateEmergencyStop
+	system := st.reportedLocked()
+	st.mu.Unlock()
+
+	if system.CentralState == before {
+		return nil
+	}
+	return []Change{
+		{Flag: protocol.BroadcastFlagXpressNet, Messages: []protocol.Message{
+			protocol.EncodeBCStopped(),
+			protocol.EncodeXStatus(protocol.XStatus{CentralState: system.CentralState}),
+		}},
+		systemStateChange(system),
+	}
+}
+
+// SetTrackPower switches the track voltage. Switching it on also ends an
+// emergency stop, a short circuit and programming mode; switching it off
+// keeps an emergency stop. If that changes the state, X-Bus subscribers are
+// told the new track power and X status, and system-state subscribers the
+// new system state.
 func (st *State) SetTrackPower(on bool) []Change {
 	st.mu.Lock()
 	before := st.system.CentralState
 	if on {
-		st.system.CentralState &^= protocol.CentralStateTrackVoltageOff
+		st.system.CentralState &^= trackPowerOnClears
 	} else {
 		st.system.CentralState |= protocol.CentralStateTrackVoltageOff
 	}

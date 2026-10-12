@@ -573,6 +573,63 @@ func TestTrackPowerReplyCarriesSystemStateForSubscribedRequester(t *testing.T) {
 	}
 }
 
+func TestSetStop(t *testing.T) {
+	_, addr := startTestServer(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	observer, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial observer: %v", err)
+	}
+	defer observer.Close()
+	if err := observer.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := observer.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	actor, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial actor: %v", err)
+	}
+	defer actor.Close()
+
+	for i := range 2 {
+		msgs, err := actor.Call(ctx, protocol.SetStop())
+		if err != nil {
+			t.Fatalf("SetStop #%d: %v", i+1, err)
+		}
+		if err := protocol.BCStoppedFromMessages(msgs); err != nil {
+			t.Fatalf("SetStop #%d reply %#v: %v", i+1, msgs, err)
+		}
+	}
+
+	msgs, err := observer.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("observer ReadPacket: %v", err)
+	}
+	if err := protocol.BCStoppedFromMessages(msgs); err != nil {
+		t.Fatalf("observer got %#v: %v", msgs, err)
+	}
+	if status, err := protocol.XStatusFromMessages(msgs); err != nil || status.CentralState != protocol.CentralStateEmergencyStop {
+		t.Fatalf("observer X status = %+v, err=%v; want emergency stop", status, err)
+	}
+
+	if _, err := actor.Call(ctx, protocol.SetTrackPower(true)); err != nil {
+		t.Fatalf("SetTrackPower(true): %v", err)
+	}
+	msgs, err = actor.Call(ctx, protocol.GetXStatus())
+	if err != nil {
+		t.Fatalf("GetXStatus: %v", err)
+	}
+	if status, err := protocol.XStatusFromMessages(msgs); err != nil || status.CentralState != 0 {
+		t.Fatalf("X status after track power on = %+v, err=%v; want emergency stop ended", status, err)
+	}
+}
+
 func containsSystemStateBroadcast(msgs []protocol.Message) bool {
 	for _, msg := range msgs {
 		if protocol.IsSystemStateDataChanged(msg) {
