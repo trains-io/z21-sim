@@ -16,10 +16,8 @@ help: ## Show targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*##' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*## "}; {printf "  %-18s %s\n", $$1, $$2}'
 
-proto: ## Regenerate gRPC code from api/simctl/v1/simctl.proto
-	protoc --go_out=. --go_opt=module=github.com/trains-io/z21-sim \
-		--go-grpc_out=. --go-grpc_opt=module=github.com/trains-io/z21-sim \
-		api/simctl/v1/simctl.proto
+proto: ## Regenerate gRPC code from api/simctl/v1/simctl.proto (buf + protoc-gen-go, protoc-gen-go-grpc)
+	buf generate
 
 proto-lint: ## Lint the control API with buf
 	buf lint

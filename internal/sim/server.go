@@ -77,6 +77,12 @@ func (s *Server) Addrs() []net.Addr {
 	return s.z21.Addrs()
 }
 
+// Clients returns the Z21 LAN clients with an active session, ordered by
+// address.
+func (s *Server) Clients() []server.ClientInfo {
+	return s.z21.Clients()
+}
+
 // Close releases the UDP sockets.
 func (s *Server) Close() error {
 	if s == nil || s.z21 == nil {

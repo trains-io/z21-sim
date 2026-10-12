@@ -335,6 +335,67 @@ func TestGRPCInjectRawInvalid(t *testing.T) {
 	}
 }
 
+func TestGRPCListClients(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	c, err := client.Dial(udpAddr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	before := time.Now()
+	if err := c.SendMany(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet), protocol.GetLocoInfo(3)); err != nil {
+		t.Fatalf("SendMany: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	resp, err := control.ListClients(ctx, &simctlv1.ListClientsRequest{})
+	if err != nil {
+		t.Fatalf("ListClients: %v", err)
+	}
+	if len(resp.GetClients()) != 1 {
+		t.Fatalf("clients = %v, want 1", resp.GetClients())
+	}
+	got := resp.GetClients()[0]
+	if got.GetAddr() != c.LocalAddr().String() || got.GetLocalAddr() != udpAddr {
+		t.Fatalf("addr = %q, local_addr = %q; want %q, %q", got.GetAddr(), got.GetLocalAddr(), c.LocalAddr(), udpAddr)
+	}
+	if got.GetBroadcastFlags() != protocol.BroadcastFlagXpressNet {
+		t.Fatalf("broadcast_flags = %#08x, want X-Bus", got.GetBroadcastFlags())
+	}
+	if locos := got.GetLocos(); len(locos) != 1 || locos[0] != 3 {
+		t.Fatalf("locos = %v, want [3]", locos)
+	}
+	if seen := got.GetLastSeen().AsTime(); seen.Before(before.Add(-time.Second)) || seen.After(time.Now()) {
+		t.Fatalf("last_seen = %v, want between %v and now", seen, before)
+	}
+
+	if err := c.Send(ctx, protocol.Message{Header: protocol.HeaderLANLogoff}); err != nil {
+		t.Fatalf("Send LAN_LOGOFF: %v", err)
+	}
+	for {
+		resp, err := control.ListClients(ctx, &simctlv1.ListClientsRequest{})
+		if err != nil {
+			t.Fatalf("ListClients: %v", err)
+		}
+		if len(resp.GetClients()) == 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatalf("client still listed after LAN_LOGOFF: %v", resp.GetClients())
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
 func containsSystemStateBroadcast(msgs []protocol.Message) bool {
 	for _, msg := range msgs {
 		if protocol.IsSystemStateDataChanged(msg) {

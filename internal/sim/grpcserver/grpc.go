@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Server exposes simulator control RPCs to sidecar containers.
@@ -137,6 +138,25 @@ func (g *Server) InjectRaw(_ context.Context, req *simctlv1.InjectRawRequest) (*
 		return nil, err
 	}
 	return &simctlv1.InjectRawResponse{RecipientCount: int32(count)}, nil
+}
+
+func (g *Server) ListClients(context.Context, *simctlv1.ListClientsRequest) (*simctlv1.ListClientsResponse, error) {
+	clients := g.sim.Clients()
+	resp := &simctlv1.ListClientsResponse{Clients: make([]*simctlv1.Client, 0, len(clients))}
+	for _, c := range clients {
+		locos := make([]uint32, len(c.Locos))
+		for i, addr := range c.Locos {
+			locos[i] = uint32(addr)
+		}
+		resp.Clients = append(resp.Clients, &simctlv1.Client{
+			Addr:           c.Addr.String(),
+			LocalAddr:      c.LocalAddr.String(),
+			BroadcastFlags: c.BroadcastFlags,
+			Locos:          locos,
+			LastSeen:       timestamppb.New(c.LastSeen),
+		})
+	}
+	return resp, nil
 }
 
 func canDeviceKindFromProto(kind simctlv1.CANDeviceKind) (sim.CANDeviceKind, error) {

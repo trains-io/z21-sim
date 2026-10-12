@@ -4,6 +4,8 @@ package trains.io.z21.simctl.v1;
 
 option go_package = "github.com/trains-io/z21-sim/api/simctl/v1;simctlv1";
 
+import "google/protobuf/timestamp.proto";
+
 // SimulatorService is the gRPC control plane for z21-sim.
 // A sidecar (z21-sim-controller) uses it to inject unsolicited Z21 LAN events.
 service SimulatorService {
@@ -22,6 +24,10 @@ service SimulatorService {
   // to any bit of broadcast_flags, for events the other RPCs do not cover. The
   // simulator state does not change.
   rpc InjectRaw(InjectRawRequest) returns (InjectRawResponse);
+
+  // ListClients returns the Z21 LAN clients with an active session, ordered
+  // by address.
+  rpc ListClients(ListClientsRequest) returns (ListClientsResponse);
 }
 
 message BroadcastSystemStateRequest {}
@@ -69,4 +75,25 @@ message InjectRawRequest {
 
 message InjectRawResponse {
   int32 recipient_count = 1;
+}
+
+message ListClientsRequest {}
+
+message ListClientsResponse {
+  repeated Client clients = 1;
+}
+
+// Client is the session of a Z21 LAN client.
+message Client {
+  // Client UDP address, "ip:port".
+  string addr = 1;
+  // Simulator socket the client last sent to, "ip:port" (port 21105 or 21106).
+  string local_addr = 2;
+  // Broadcast flags set with LAN_SET_BROADCASTFLAGS (Z21 LAN spec §2.16).
+  uint32 broadcast_flags = 3;
+  // Loco addresses subscribed with LAN_X_GET_LOCO_INFO, oldest first (at most 16).
+  repeated uint32 locos = 4;
+  // Last packet received from the client; the session ends after one minute
+  // of silence.
+  google.protobuf.Timestamp last_seen = 5;
 }

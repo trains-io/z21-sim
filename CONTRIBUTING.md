@@ -9,7 +9,7 @@ Thanks for contributing to [github.com/trains-io/z21-sim](https://github.com/tra
 | Go | 1.24+ | Build and test |
 | Docker | recent | Integration tests and container image |
 | [grpcurl](https://github.com/fullstorydev/grpcurl) | recent | Manual gRPC control-plane testing |
-| protoc + plugins | optional | Regenerate gRPC stubs (`make proto`) |
+| [buf](https://buf.build/docs/installation) + `protoc-gen-go`, `protoc-gen-go-grpc` | optional | Regenerate gRPC stubs (`make proto`), lint and breaking-change checks (`make proto-lint`, `make proto-breaking`) |
 
 For end-to-end LAN testing, [z21cli](https://github.com/trains-io/z21cli) is useful but not required.
 
@@ -255,10 +255,10 @@ For system-state or track-power events, subscribe to `SYSTEM_UPDATES` or `XPRESS
 After editing `api/simctl/v1/simctl.proto`:
 
 ```bash
-make proto
+make proto-lint proto-breaking proto
 ```
 
-Requires `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on your `PATH`.
+Requires `buf`, `protoc-gen-go`, and `protoc-gen-go-grpc` on your `PATH` (`buf.gen.yaml` uses the local plugins). `make proto-breaking` compares against the `main` branch; CI runs the same checks.
 
 ## CI
 
