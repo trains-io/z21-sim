@@ -11,7 +11,9 @@ import (
 	"github.com/trains-io/z21.go/client"
 	"github.com/trains-io/z21.go/protocol"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 func startSimulator(t *testing.T) (*sim.Server, string) {
@@ -229,6 +231,107 @@ func TestGRPCNotifyCANDeviceDetected(t *testing.T) {
 	}
 	if len(reports) != 1 || reports[0].NetID != 0xDB04 || reports[0].Addr != 60 {
 		t.Fatalf("reports = %+v", reports)
+	}
+}
+
+// startControl serves the control API for simulator and returns a connected
+// client.
+func startControl(t *testing.T, simulator *sim.Server) simctlv1.SimulatorServiceClient {
+	t.Helper()
+	grpcSrv, err := grpcserver.New(simulator, "127.0.0.1:0", nil)
+	if err != nil {
+		t.Fatalf("grpcserver.New: %v", err)
+	}
+	t.Cleanup(grpcSrv.Stop)
+	go func() { _ = grpcSrv.Serve() }()
+
+	conn, err := grpc.NewClient(grpcSrv.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("grpc.NewClient: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	return simctlv1.NewSimulatorServiceClient(conn)
+}
+
+func TestGRPCInjectRaw(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	c, err := client.Dial(udpAddr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	payload, err := protocol.MarshalAll(protocol.EncodeTrackPowerBC(false))
+	if err != nil {
+		t.Fatalf("MarshalAll: %v", err)
+	}
+	resp, err := control.InjectRaw(ctx, &simctlv1.InjectRawRequest{
+		Payload:        payload,
+		BroadcastFlags: protocol.BroadcastFlagXpressNet,
+	})
+	if err != nil {
+		t.Fatalf("InjectRaw: %v", err)
+	}
+	if resp.GetRecipientCount() != 1 {
+		t.Fatalf("RecipientCount = %d, want 1", resp.GetRecipientCount())
+	}
+
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("got %#v, want the injected dataset", msgs)
+	}
+	if on, err := protocol.ParseTrackPowerBC(msgs[0].Data); err != nil || on {
+		t.Fatalf("injected dataset = %#v, want track power off", msgs[0])
+	}
+	replies, err := c.Call(ctx, protocol.GetXStatus())
+	if err != nil {
+		t.Fatalf("GetXStatus: %v", err)
+	}
+	if status, err := protocol.XStatusFromMessages(replies); err != nil || status.CentralState != 0 {
+		t.Fatalf("X status after InjectRaw = %+v, err=%v; want unchanged (track power on)", status, err)
+	}
+}
+
+func TestGRPCInjectRawInvalid(t *testing.T) {
+	simulator, _ := startSimulator(t)
+	control := startControl(t, simulator)
+
+	valid, err := protocol.MarshalAll(protocol.EncodeTrackPowerBC(false))
+	if err != nil {
+		t.Fatalf("MarshalAll: %v", err)
+	}
+	tests := []struct {
+		name string
+		req  *simctlv1.InjectRawRequest
+	}{
+		{name: "zero flags", req: &simctlv1.InjectRawRequest{Payload: valid}},
+		{name: "truncated payload", req: &simctlv1.InjectRawRequest{Payload: valid[:3], BroadcastFlags: 1}},
+		{name: "empty payload", req: &simctlv1.InjectRawRequest{BroadcastFlags: 1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			_, err := control.InjectRaw(ctx, tt.req)
+			if status.Code(err) != codes.InvalidArgument {
+				t.Fatalf("InjectRaw error = %v, want InvalidArgument", err)
+			}
+		})
 	}
 }
 

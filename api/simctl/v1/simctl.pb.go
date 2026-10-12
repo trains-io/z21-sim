@@ -374,6 +374,106 @@ func (x *NotifyCANDeviceDetectedResponse) GetRecipientCount() int32 {
 	return 0
 }
 
+type InjectRawRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One or more complete datasets as on the wire: 2-byte little-endian
+	// length, 2-byte header, data.
+	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	// Broadcast flags (Z21 LAN spec §2.16, for example 0x00000001 for X-Bus);
+	// must not be zero.
+	BroadcastFlags uint32 `protobuf:"varint,2,opt,name=broadcast_flags,json=broadcastFlags,proto3" json:"broadcast_flags,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InjectRawRequest) Reset() {
+	*x = InjectRawRequest{}
+	mi := &file_api_simctl_v1_simctl_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InjectRawRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InjectRawRequest) ProtoMessage() {}
+
+func (x *InjectRawRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_simctl_v1_simctl_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InjectRawRequest.ProtoReflect.Descriptor instead.
+func (*InjectRawRequest) Descriptor() ([]byte, []int) {
+	return file_api_simctl_v1_simctl_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *InjectRawRequest) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *InjectRawRequest) GetBroadcastFlags() uint32 {
+	if x != nil {
+		return x.BroadcastFlags
+	}
+	return 0
+}
+
+type InjectRawResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	RecipientCount int32                  `protobuf:"varint,1,opt,name=recipient_count,json=recipientCount,proto3" json:"recipient_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InjectRawResponse) Reset() {
+	*x = InjectRawResponse{}
+	mi := &file_api_simctl_v1_simctl_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InjectRawResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InjectRawResponse) ProtoMessage() {}
+
+func (x *InjectRawResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_simctl_v1_simctl_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InjectRawResponse.ProtoReflect.Descriptor instead.
+func (*InjectRawResponse) Descriptor() ([]byte, []int) {
+	return file_api_simctl_v1_simctl_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *InjectRawResponse) GetRecipientCount() int32 {
+	if x != nil {
+		return x.RecipientCount
+	}
+	return 0
+}
+
 var File_api_simctl_v1_simctl_proto protoreflect.FileDescriptor
 
 const file_api_simctl_v1_simctl_proto_rawDesc = "" +
@@ -398,15 +498,21 @@ const file_api_simctl_v1_simctl_proto_rawDesc = "" +
 	"\voutput_port\x18\x06 \x01(\rR\n" +
 	"outputPort\"J\n" +
 	"\x1fNotifyCANDeviceDetectedResponse\x12'\n" +
+	"\x0frecipient_count\x18\x01 \x01(\x05R\x0erecipientCount\"U\n" +
+	"\x10InjectRawRequest\x12\x18\n" +
+	"\apayload\x18\x01 \x01(\fR\apayload\x12'\n" +
+	"\x0fbroadcast_flags\x18\x02 \x01(\rR\x0ebroadcastFlags\"<\n" +
+	"\x11InjectRawResponse\x12'\n" +
 	"\x0frecipient_count\x18\x01 \x01(\x05R\x0erecipientCount*k\n" +
 	"\rCANDeviceKind\x12\x1f\n" +
 	"\x1bCAN_DEVICE_KIND_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18CAN_DEVICE_KIND_DETECTOR\x10\x01\x12\x1b\n" +
-	"\x17CAN_DEVICE_KIND_BOOSTER\x10\x022\x97\x03\n" +
+	"\x17CAN_DEVICE_KIND_BOOSTER\x10\x022\xfb\x03\n" +
 	"\x10SimulatorService\x12\x83\x01\n" +
 	"\x14BroadcastSystemState\x124.trains.io.z21.simctl.v1.BroadcastSystemStateRequest\x1a5.trains.io.z21.simctl.v1.BroadcastSystemStateResponse\x12n\n" +
 	"\rSetTrackPower\x12-.trains.io.z21.simctl.v1.SetTrackPowerRequest\x1a..trains.io.z21.simctl.v1.SetTrackPowerResponse\x12\x8c\x01\n" +
-	"\x17NotifyCANDeviceDetected\x127.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest\x1a8.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponseB5Z3github.com/trains-io/z21-sim/api/simctl/v1;simctlv1b\x06proto3"
+	"\x17NotifyCANDeviceDetected\x127.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest\x1a8.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse\x12b\n" +
+	"\tInjectRaw\x12).trains.io.z21.simctl.v1.InjectRawRequest\x1a*.trains.io.z21.simctl.v1.InjectRawResponseB5Z3github.com/trains-io/z21-sim/api/simctl/v1;simctlv1b\x06proto3"
 
 var (
 	file_api_simctl_v1_simctl_proto_rawDescOnce sync.Once
@@ -421,7 +527,7 @@ func file_api_simctl_v1_simctl_proto_rawDescGZIP() []byte {
 }
 
 var file_api_simctl_v1_simctl_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_simctl_v1_simctl_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_api_simctl_v1_simctl_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_api_simctl_v1_simctl_proto_goTypes = []any{
 	(CANDeviceKind)(0),                      // 0: trains.io.z21.simctl.v1.CANDeviceKind
 	(*BroadcastSystemStateRequest)(nil),     // 1: trains.io.z21.simctl.v1.BroadcastSystemStateRequest
@@ -430,17 +536,21 @@ var file_api_simctl_v1_simctl_proto_goTypes = []any{
 	(*SetTrackPowerResponse)(nil),           // 4: trains.io.z21.simctl.v1.SetTrackPowerResponse
 	(*NotifyCANDeviceDetectedRequest)(nil),  // 5: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest
 	(*NotifyCANDeviceDetectedResponse)(nil), // 6: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
+	(*InjectRawRequest)(nil),                // 7: trains.io.z21.simctl.v1.InjectRawRequest
+	(*InjectRawResponse)(nil),               // 8: trains.io.z21.simctl.v1.InjectRawResponse
 }
 var file_api_simctl_v1_simctl_proto_depIdxs = []int32{
 	0, // 0: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest.kind:type_name -> trains.io.z21.simctl.v1.CANDeviceKind
 	1, // 1: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:input_type -> trains.io.z21.simctl.v1.BroadcastSystemStateRequest
 	3, // 2: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:input_type -> trains.io.z21.simctl.v1.SetTrackPowerRequest
 	5, // 3: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:input_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest
-	2, // 4: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21.simctl.v1.BroadcastSystemStateResponse
-	4, // 5: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21.simctl.v1.SetTrackPowerResponse
-	6, // 6: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:output_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	7, // 4: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:input_type -> trains.io.z21.simctl.v1.InjectRawRequest
+	2, // 5: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21.simctl.v1.BroadcastSystemStateResponse
+	4, // 6: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21.simctl.v1.SetTrackPowerResponse
+	6, // 7: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:output_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
+	8, // 8: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:output_type -> trains.io.z21.simctl.v1.InjectRawResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -457,7 +567,7 @@ func file_api_simctl_v1_simctl_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_simctl_v1_simctl_proto_rawDesc), len(file_api_simctl_v1_simctl_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

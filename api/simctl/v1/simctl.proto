@@ -17,6 +17,11 @@ service SimulatorService {
   // NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
   // status to subscribed clients, emulating hot-plug detection.
   rpc NotifyCANDeviceDetected(NotifyCANDeviceDetectedRequest) returns (NotifyCANDeviceDetectedResponse);
+
+  // InjectRaw sends raw Z21 datasets in one packet to the clients subscribed
+  // to any bit of broadcast_flags, for events the other RPCs do not cover. The
+  // simulator state does not change.
+  rpc InjectRaw(InjectRawRequest) returns (InjectRawResponse);
 }
 
 message BroadcastSystemStateRequest {}
@@ -50,5 +55,18 @@ message NotifyCANDeviceDetectedRequest {
 }
 
 message NotifyCANDeviceDetectedResponse {
+  int32 recipient_count = 1;
+}
+
+message InjectRawRequest {
+  // One or more complete datasets as on the wire: 2-byte little-endian
+  // length, 2-byte header, data.
+  bytes payload = 1;
+  // Broadcast flags (Z21 LAN spec §2.16, for example 0x00000001 for X-Bus);
+  // must not be zero.
+  uint32 broadcast_flags = 2;
+}
+
+message InjectRawResponse {
   int32 recipient_count = 1;
 }

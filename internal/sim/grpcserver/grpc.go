@@ -2,6 +2,7 @@ package grpcserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -10,6 +11,8 @@ import (
 	"github.com/trains-io/z21-sim/internal/sim"
 	"github.com/trains-io/z21-sim/internal/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Server exposes simulator control RPCs to sidecar containers.
@@ -123,6 +126,17 @@ func (g *Server) NotifyCANDeviceDetected(_ context.Context, req *simctlv1.Notify
 
 	count := g.sim.NotifyCANDeviceDetected(device)
 	return &simctlv1.NotifyCANDeviceDetectedResponse{RecipientCount: int32(count)}, nil
+}
+
+func (g *Server) InjectRaw(_ context.Context, req *simctlv1.InjectRawRequest) (*simctlv1.InjectRawResponse, error) {
+	count, err := g.sim.InjectRaw(req.GetBroadcastFlags(), req.GetPayload())
+	if errors.Is(err, sim.ErrInvalidInjection) {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &simctlv1.InjectRawResponse{RecipientCount: int32(count)}, nil
 }
 
 func canDeviceKindFromProto(kind simctlv1.CANDeviceKind) (sim.CANDeviceKind, error) {

@@ -1,6 +1,9 @@
 package sim
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/trains-io/z21.go/protocol"
 	"github.com/trains-io/z21.go/server"
 )
@@ -26,6 +29,26 @@ func (s *Server) broadcast(changes []Change) int {
 		sent += s.z21.Broadcast(ch.Flag, ch.Messages...)
 	}
 	return sent
+}
+
+// ErrInvalidInjection is returned by InjectRaw for a request it cannot send.
+var ErrInvalidInjection = errors.New("z21-sim: invalid injection")
+
+// InjectRaw sends the datasets in payload, as one packet, to the clients
+// subscribed to any bit of flag (protocol.BroadcastFlag*), without changing the
+// simulator state. It returns the number of clients it was sent to.
+func (s *Server) InjectRaw(flag uint32, payload []byte) (int, error) {
+	if flag == 0 {
+		return 0, fmt.Errorf("%w: broadcast flags must not be zero", ErrInvalidInjection)
+	}
+	msgs, err := protocol.ParseAll(payload)
+	if err != nil {
+		return 0, fmt.Errorf("%w: payload: %v", ErrInvalidInjection, err)
+	}
+	if len(msgs) == 0 {
+		return 0, fmt.Errorf("%w: payload has no datasets", ErrInvalidInjection)
+	}
+	return s.z21.Broadcast(flag, msgs...), nil
 }
 
 // BroadcastSystemState sends LAN_SYSTEMSTATE_DATACHANGED to all clients

@@ -22,6 +22,7 @@ const (
 	SimulatorService_BroadcastSystemState_FullMethodName    = "/trains.io.z21.simctl.v1.SimulatorService/BroadcastSystemState"
 	SimulatorService_SetTrackPower_FullMethodName           = "/trains.io.z21.simctl.v1.SimulatorService/SetTrackPower"
 	SimulatorService_NotifyCANDeviceDetected_FullMethodName = "/trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected"
+	SimulatorService_InjectRaw_FullMethodName               = "/trains.io.z21.simctl.v1.SimulatorService/InjectRaw"
 )
 
 // SimulatorServiceClient is the client API for SimulatorService service.
@@ -39,6 +40,10 @@ type SimulatorServiceClient interface {
 	// NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
 	// status to subscribed clients, emulating hot-plug detection.
 	NotifyCANDeviceDetected(ctx context.Context, in *NotifyCANDeviceDetectedRequest, opts ...grpc.CallOption) (*NotifyCANDeviceDetectedResponse, error)
+	// InjectRaw sends raw Z21 datasets in one packet to the clients subscribed
+	// to any bit of broadcast_flags, for events the other RPCs do not cover. The
+	// simulator state does not change.
+	InjectRaw(ctx context.Context, in *InjectRawRequest, opts ...grpc.CallOption) (*InjectRawResponse, error)
 }
 
 type simulatorServiceClient struct {
@@ -79,6 +84,16 @@ func (c *simulatorServiceClient) NotifyCANDeviceDetected(ctx context.Context, in
 	return out, nil
 }
 
+func (c *simulatorServiceClient) InjectRaw(ctx context.Context, in *InjectRawRequest, opts ...grpc.CallOption) (*InjectRawResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InjectRawResponse)
+	err := c.cc.Invoke(ctx, SimulatorService_InjectRaw_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SimulatorServiceServer is the server API for SimulatorService service.
 // All implementations must embed UnimplementedSimulatorServiceServer
 // for forward compatibility.
@@ -94,6 +109,10 @@ type SimulatorServiceServer interface {
 	// NotifyCANDeviceDetected registers a CAN device and broadcasts its initial
 	// status to subscribed clients, emulating hot-plug detection.
 	NotifyCANDeviceDetected(context.Context, *NotifyCANDeviceDetectedRequest) (*NotifyCANDeviceDetectedResponse, error)
+	// InjectRaw sends raw Z21 datasets in one packet to the clients subscribed
+	// to any bit of broadcast_flags, for events the other RPCs do not cover. The
+	// simulator state does not change.
+	InjectRaw(context.Context, *InjectRawRequest) (*InjectRawResponse, error)
 	mustEmbedUnimplementedSimulatorServiceServer()
 }
 
@@ -112,6 +131,9 @@ func (UnimplementedSimulatorServiceServer) SetTrackPower(context.Context, *SetTr
 }
 func (UnimplementedSimulatorServiceServer) NotifyCANDeviceDetected(context.Context, *NotifyCANDeviceDetectedRequest) (*NotifyCANDeviceDetectedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NotifyCANDeviceDetected not implemented")
+}
+func (UnimplementedSimulatorServiceServer) InjectRaw(context.Context, *InjectRawRequest) (*InjectRawResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InjectRaw not implemented")
 }
 func (UnimplementedSimulatorServiceServer) mustEmbedUnimplementedSimulatorServiceServer() {}
 func (UnimplementedSimulatorServiceServer) testEmbeddedByValue()                          {}
@@ -188,6 +210,24 @@ func _SimulatorService_NotifyCANDeviceDetected_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SimulatorService_InjectRaw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InjectRawRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SimulatorServiceServer).InjectRaw(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SimulatorService_InjectRaw_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SimulatorServiceServer).InjectRaw(ctx, req.(*InjectRawRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SimulatorService_ServiceDesc is the grpc.ServiceDesc for SimulatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -206,6 +246,10 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NotifyCANDeviceDetected",
 			Handler:    _SimulatorService_NotifyCANDeviceDetected_Handler,
+		},
+		{
+			MethodName: "InjectRaw",
+			Handler:    _SimulatorService_InjectRaw_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
