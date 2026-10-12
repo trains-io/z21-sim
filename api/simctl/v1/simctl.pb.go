@@ -555,6 +555,151 @@ func (x *ListClientsResponse) GetClients() []*Client {
 	return nil
 }
 
+// SetSystemStateRequest holds the values to change (Z21 LAN spec §2.18).
+// Signed values must fit in int16, unsigned values in uint16.
+type SetSystemStateRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current on the main track, mA.
+	MainCurrentMa *int32 `protobuf:"varint,1,opt,name=main_current_ma,json=mainCurrentMa,proto3,oneof" json:"main_current_ma,omitempty"`
+	// Current on the programming track, mA.
+	ProgCurrentMa *int32 `protobuf:"varint,2,opt,name=prog_current_ma,json=progCurrentMa,proto3,oneof" json:"prog_current_ma,omitempty"`
+	// Smoothed current on the main track, mA.
+	FilteredMainCurrentMa *int32 `protobuf:"varint,3,opt,name=filtered_main_current_ma,json=filteredMainCurrentMa,proto3,oneof" json:"filtered_main_current_ma,omitempty"`
+	// Internal temperature, °C.
+	TemperatureC *int32 `protobuf:"varint,4,opt,name=temperature_c,json=temperatureC,proto3,oneof" json:"temperature_c,omitempty"`
+	// Supply voltage, mV.
+	SupplyVoltageMv *uint32 `protobuf:"varint,5,opt,name=supply_voltage_mv,json=supplyVoltageMv,proto3,oneof" json:"supply_voltage_mv,omitempty"`
+	// Internal voltage, identical to track voltage, mV.
+	VccVoltageMv  *uint32 `protobuf:"varint,6,opt,name=vcc_voltage_mv,json=vccVoltageMv,proto3,oneof" json:"vcc_voltage_mv,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetSystemStateRequest) Reset() {
+	*x = SetSystemStateRequest{}
+	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSystemStateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSystemStateRequest) ProtoMessage() {}
+
+func (x *SetSystemStateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSystemStateRequest.ProtoReflect.Descriptor instead.
+func (*SetSystemStateRequest) Descriptor() ([]byte, []int) {
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SetSystemStateRequest) GetMainCurrentMa() int32 {
+	if x != nil && x.MainCurrentMa != nil {
+		return *x.MainCurrentMa
+	}
+	return 0
+}
+
+func (x *SetSystemStateRequest) GetProgCurrentMa() int32 {
+	if x != nil && x.ProgCurrentMa != nil {
+		return *x.ProgCurrentMa
+	}
+	return 0
+}
+
+func (x *SetSystemStateRequest) GetFilteredMainCurrentMa() int32 {
+	if x != nil && x.FilteredMainCurrentMa != nil {
+		return *x.FilteredMainCurrentMa
+	}
+	return 0
+}
+
+func (x *SetSystemStateRequest) GetTemperatureC() int32 {
+	if x != nil && x.TemperatureC != nil {
+		return *x.TemperatureC
+	}
+	return 0
+}
+
+func (x *SetSystemStateRequest) GetSupplyVoltageMv() uint32 {
+	if x != nil && x.SupplyVoltageMv != nil {
+		return *x.SupplyVoltageMv
+	}
+	return 0
+}
+
+func (x *SetSystemStateRequest) GetVccVoltageMv() uint32 {
+	if x != nil && x.VccVoltageMv != nil {
+		return *x.VccVoltageMv
+	}
+	return 0
+}
+
+type SetSystemStateResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Whether any value differed from the previous state.
+	Changed        bool  `protobuf:"varint,1,opt,name=changed,proto3" json:"changed,omitempty"`
+	RecipientCount int32 `protobuf:"varint,2,opt,name=recipient_count,json=recipientCount,proto3" json:"recipient_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetSystemStateResponse) Reset() {
+	*x = SetSystemStateResponse{}
+	mi := &file_simctl_v1_simctl_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSystemStateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSystemStateResponse) ProtoMessage() {}
+
+func (x *SetSystemStateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_simctl_v1_simctl_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSystemStateResponse.ProtoReflect.Descriptor instead.
+func (*SetSystemStateResponse) Descriptor() ([]byte, []int) {
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SetSystemStateResponse) GetChanged() bool {
+	if x != nil {
+		return x.Changed
+	}
+	return false
+}
+
+func (x *SetSystemStateResponse) GetRecipientCount() int32 {
+	if x != nil {
+		return x.RecipientCount
+	}
+	return 0
+}
+
 // Client is the session of a Z21 LAN client.
 type Client struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -575,7 +720,7 @@ type Client struct {
 
 func (x *Client) Reset() {
 	*x = Client{}
-	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -587,7 +732,7 @@ func (x *Client) String() string {
 func (*Client) ProtoMessage() {}
 
 func (x *Client) ProtoReflect() protoreflect.Message {
-	mi := &file_simctl_v1_simctl_proto_msgTypes[10]
+	mi := &file_simctl_v1_simctl_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -600,7 +745,7 @@ func (x *Client) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Client.ProtoReflect.Descriptor instead.
 func (*Client) Descriptor() ([]byte, []int) {
-	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{10}
+	return file_simctl_v1_simctl_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Client) GetAddr() string {
@@ -670,7 +815,23 @@ const file_simctl_v1_simctl_proto_rawDesc = "" +
 	"\x0frecipient_count\x18\x01 \x01(\x05R\x0erecipientCount\"\x14\n" +
 	"\x12ListClientsRequest\"P\n" +
 	"\x13ListClientsResponse\x129\n" +
-	"\aclients\x18\x01 \x03(\v2\x1f.trains.io.z21.simctl.v1.ClientR\aclients\"\xb3\x01\n" +
+	"\aclients\x18\x01 \x03(\v2\x1f.trains.io.z21.simctl.v1.ClientR\aclients\"\xb5\x03\n" +
+	"\x15SetSystemStateRequest\x12+\n" +
+	"\x0fmain_current_ma\x18\x01 \x01(\x05H\x00R\rmainCurrentMa\x88\x01\x01\x12+\n" +
+	"\x0fprog_current_ma\x18\x02 \x01(\x05H\x01R\rprogCurrentMa\x88\x01\x01\x12<\n" +
+	"\x18filtered_main_current_ma\x18\x03 \x01(\x05H\x02R\x15filteredMainCurrentMa\x88\x01\x01\x12(\n" +
+	"\rtemperature_c\x18\x04 \x01(\x05H\x03R\ftemperatureC\x88\x01\x01\x12/\n" +
+	"\x11supply_voltage_mv\x18\x05 \x01(\rH\x04R\x0fsupplyVoltageMv\x88\x01\x01\x12)\n" +
+	"\x0evcc_voltage_mv\x18\x06 \x01(\rH\x05R\fvccVoltageMv\x88\x01\x01B\x12\n" +
+	"\x10_main_current_maB\x12\n" +
+	"\x10_prog_current_maB\x1b\n" +
+	"\x19_filtered_main_current_maB\x10\n" +
+	"\x0e_temperature_cB\x14\n" +
+	"\x12_supply_voltage_mvB\x11\n" +
+	"\x0f_vcc_voltage_mv\"[\n" +
+	"\x16SetSystemStateResponse\x12\x18\n" +
+	"\achanged\x18\x01 \x01(\bR\achanged\x12'\n" +
+	"\x0frecipient_count\x18\x02 \x01(\x05R\x0erecipientCount\"\xb3\x01\n" +
 	"\x06Client\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x1d\n" +
 	"\n" +
@@ -681,13 +842,14 @@ const file_simctl_v1_simctl_proto_rawDesc = "" +
 	"\rCANDeviceKind\x12\x1f\n" +
 	"\x1bCAN_DEVICE_KIND_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18CAN_DEVICE_KIND_DETECTOR\x10\x01\x12\x1b\n" +
-	"\x17CAN_DEVICE_KIND_BOOSTER\x10\x022\xe5\x04\n" +
+	"\x17CAN_DEVICE_KIND_BOOSTER\x10\x022\xd8\x05\n" +
 	"\x10SimulatorService\x12\x83\x01\n" +
 	"\x14BroadcastSystemState\x124.trains.io.z21.simctl.v1.BroadcastSystemStateRequest\x1a5.trains.io.z21.simctl.v1.BroadcastSystemStateResponse\x12n\n" +
 	"\rSetTrackPower\x12-.trains.io.z21.simctl.v1.SetTrackPowerRequest\x1a..trains.io.z21.simctl.v1.SetTrackPowerResponse\x12\x8c\x01\n" +
 	"\x17NotifyCANDeviceDetected\x127.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest\x1a8.trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse\x12b\n" +
 	"\tInjectRaw\x12).trains.io.z21.simctl.v1.InjectRawRequest\x1a*.trains.io.z21.simctl.v1.InjectRawResponse\x12h\n" +
-	"\vListClients\x12+.trains.io.z21.simctl.v1.ListClientsRequest\x1a,.trains.io.z21.simctl.v1.ListClientsResponseB5Z3github.com/trains-io/z21-sim/api/simctl/v1;simctlv1b\x06proto3"
+	"\vListClients\x12+.trains.io.z21.simctl.v1.ListClientsRequest\x1a,.trains.io.z21.simctl.v1.ListClientsResponse\x12q\n" +
+	"\x0eSetSystemState\x12..trains.io.z21.simctl.v1.SetSystemStateRequest\x1a/.trains.io.z21.simctl.v1.SetSystemStateResponseB5Z3github.com/trains-io/z21-sim/api/simctl/v1;simctlv1b\x06proto3"
 
 var (
 	file_simctl_v1_simctl_proto_rawDescOnce sync.Once
@@ -702,7 +864,7 @@ func file_simctl_v1_simctl_proto_rawDescGZIP() []byte {
 }
 
 var file_simctl_v1_simctl_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_simctl_v1_simctl_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_simctl_v1_simctl_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_simctl_v1_simctl_proto_goTypes = []any{
 	(CANDeviceKind)(0),                      // 0: trains.io.z21.simctl.v1.CANDeviceKind
 	(*BroadcastSystemStateRequest)(nil),     // 1: trains.io.z21.simctl.v1.BroadcastSystemStateRequest
@@ -715,25 +877,29 @@ var file_simctl_v1_simctl_proto_goTypes = []any{
 	(*InjectRawResponse)(nil),               // 8: trains.io.z21.simctl.v1.InjectRawResponse
 	(*ListClientsRequest)(nil),              // 9: trains.io.z21.simctl.v1.ListClientsRequest
 	(*ListClientsResponse)(nil),             // 10: trains.io.z21.simctl.v1.ListClientsResponse
-	(*Client)(nil),                          // 11: trains.io.z21.simctl.v1.Client
-	(*timestamppb.Timestamp)(nil),           // 12: google.protobuf.Timestamp
+	(*SetSystemStateRequest)(nil),           // 11: trains.io.z21.simctl.v1.SetSystemStateRequest
+	(*SetSystemStateResponse)(nil),          // 12: trains.io.z21.simctl.v1.SetSystemStateResponse
+	(*Client)(nil),                          // 13: trains.io.z21.simctl.v1.Client
+	(*timestamppb.Timestamp)(nil),           // 14: google.protobuf.Timestamp
 }
 var file_simctl_v1_simctl_proto_depIdxs = []int32{
 	0,  // 0: trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest.kind:type_name -> trains.io.z21.simctl.v1.CANDeviceKind
-	11, // 1: trains.io.z21.simctl.v1.ListClientsResponse.clients:type_name -> trains.io.z21.simctl.v1.Client
-	12, // 2: trains.io.z21.simctl.v1.Client.last_seen:type_name -> google.protobuf.Timestamp
+	13, // 1: trains.io.z21.simctl.v1.ListClientsResponse.clients:type_name -> trains.io.z21.simctl.v1.Client
+	14, // 2: trains.io.z21.simctl.v1.Client.last_seen:type_name -> google.protobuf.Timestamp
 	1,  // 3: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:input_type -> trains.io.z21.simctl.v1.BroadcastSystemStateRequest
 	3,  // 4: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:input_type -> trains.io.z21.simctl.v1.SetTrackPowerRequest
 	5,  // 5: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:input_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedRequest
 	7,  // 6: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:input_type -> trains.io.z21.simctl.v1.InjectRawRequest
 	9,  // 7: trains.io.z21.simctl.v1.SimulatorService.ListClients:input_type -> trains.io.z21.simctl.v1.ListClientsRequest
-	2,  // 8: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21.simctl.v1.BroadcastSystemStateResponse
-	4,  // 9: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21.simctl.v1.SetTrackPowerResponse
-	6,  // 10: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:output_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
-	8,  // 11: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:output_type -> trains.io.z21.simctl.v1.InjectRawResponse
-	10, // 12: trains.io.z21.simctl.v1.SimulatorService.ListClients:output_type -> trains.io.z21.simctl.v1.ListClientsResponse
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
+	11, // 8: trains.io.z21.simctl.v1.SimulatorService.SetSystemState:input_type -> trains.io.z21.simctl.v1.SetSystemStateRequest
+	2,  // 9: trains.io.z21.simctl.v1.SimulatorService.BroadcastSystemState:output_type -> trains.io.z21.simctl.v1.BroadcastSystemStateResponse
+	4,  // 10: trains.io.z21.simctl.v1.SimulatorService.SetTrackPower:output_type -> trains.io.z21.simctl.v1.SetTrackPowerResponse
+	6,  // 11: trains.io.z21.simctl.v1.SimulatorService.NotifyCANDeviceDetected:output_type -> trains.io.z21.simctl.v1.NotifyCANDeviceDetectedResponse
+	8,  // 12: trains.io.z21.simctl.v1.SimulatorService.InjectRaw:output_type -> trains.io.z21.simctl.v1.InjectRawResponse
+	10, // 13: trains.io.z21.simctl.v1.SimulatorService.ListClients:output_type -> trains.io.z21.simctl.v1.ListClientsResponse
+	12, // 14: trains.io.z21.simctl.v1.SimulatorService.SetSystemState:output_type -> trains.io.z21.simctl.v1.SetSystemStateResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -744,13 +910,14 @@ func file_simctl_v1_simctl_proto_init() {
 	if File_simctl_v1_simctl_proto != nil {
 		return
 	}
+	file_simctl_v1_simctl_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_simctl_v1_simctl_proto_rawDesc), len(file_simctl_v1_simctl_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

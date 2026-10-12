@@ -58,6 +58,47 @@ func (st *State) TrackPower() bool {
 	return st.System().CentralState&protocol.CentralStateTrackVoltageOff == 0
 }
 
+// SystemValues are the measured values of the system state (spec §2.18). Nil
+// fields are left unchanged.
+type SystemValues struct {
+	MainCurrent         *int16  // mA
+	ProgCurrent         *int16  // mA
+	FilteredMainCurrent *int16  // mA
+	Temperature         *int16  // °C
+	SupplyVoltage       *uint16 // mV
+	VCCVoltage          *uint16 // mV
+}
+
+// SetSystemValues changes the measured values. If that changes the state,
+// system-state subscribers get the new system state.
+func (st *State) SetSystemValues(v SystemValues) []Change {
+	st.mu.Lock()
+	before := st.system
+	setIfNotNil(&st.system.MainCurrent, v.MainCurrent)
+	setIfNotNil(&st.system.ProgCurrent, v.ProgCurrent)
+	setIfNotNil(&st.system.FilteredMainCurrent, v.FilteredMainCurrent)
+	setIfNotNil(&st.system.Temperature, v.Temperature)
+	setIfNotNil(&st.system.SupplyVoltage, v.SupplyVoltage)
+	setIfNotNil(&st.system.VCCVoltage, v.VCCVoltage)
+	system := st.system
+	st.mu.Unlock()
+
+	if system == before {
+		return nil
+	}
+	return []Change{systemStateChange(system)}
+}
+
+func setIfNotNil[T any](dst *T, v *T) {
+	if v != nil {
+		*dst = *v
+	}
+}
+
+func systemStateChange(system protocol.SystemState) Change {
+	return Change{Flag: protocol.BroadcastFlagSystemState, Messages: []protocol.Message{protocol.EncodeSystemState(system)}}
+}
+
 // SetTrackPower switches the track voltage. If that changes the state, X-Bus
 // subscribers are told the new track power and X status, and system-state
 // subscribers the new system state.
@@ -80,6 +121,6 @@ func (st *State) SetTrackPower(on bool) []Change {
 			protocol.EncodeTrackPowerBC(on),
 			protocol.EncodeXStatus(protocol.XStatus{CentralState: system.CentralState}),
 		}},
-		{Flag: protocol.BroadcastFlagSystemState, Messages: []protocol.Message{protocol.EncodeSystemState(system)}},
+		systemStateChange(system),
 	}
 }

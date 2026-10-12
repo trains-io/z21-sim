@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 
 	simctlv1 "github.com/trains-io/z21-sim/api/simctl/v1"
@@ -157,6 +158,47 @@ func (g *Server) ListClients(context.Context, *simctlv1.ListClientsRequest) (*si
 		})
 	}
 	return resp, nil
+}
+
+func (g *Server) SetSystemState(_ context.Context, req *simctlv1.SetSystemStateRequest) (*simctlv1.SetSystemStateResponse, error) {
+	var (
+		v    sim.SystemValues
+		errs []error
+	)
+	v.MainCurrent, errs = int16Field(errs, "main_current_ma", req.MainCurrentMa)
+	v.ProgCurrent, errs = int16Field(errs, "prog_current_ma", req.ProgCurrentMa)
+	v.FilteredMainCurrent, errs = int16Field(errs, "filtered_main_current_ma", req.FilteredMainCurrentMa)
+	v.Temperature, errs = int16Field(errs, "temperature_c", req.TemperatureC)
+	v.SupplyVoltage, errs = uint16Field(errs, "supply_voltage_mv", req.SupplyVoltageMv)
+	v.VCCVoltage, errs = uint16Field(errs, "vcc_voltage_mv", req.VccVoltageMv)
+	if err := errors.Join(errs...); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	changed, count := g.sim.SetSystemValues(v)
+	return &simctlv1.SetSystemStateResponse{Changed: changed, RecipientCount: int32(count)}, nil
+}
+
+func int16Field(errs []error, name string, v *int32) (*int16, []error) {
+	if v == nil {
+		return nil, errs
+	}
+	if *v < math.MinInt16 || *v > math.MaxInt16 {
+		return nil, append(errs, fmt.Errorf("%s %d out of range [%d, %d]", name, *v, math.MinInt16, math.MaxInt16))
+	}
+	n := int16(*v)
+	return &n, errs
+}
+
+func uint16Field(errs []error, name string, v *uint32) (*uint16, []error) {
+	if v == nil {
+		return nil, errs
+	}
+	if *v > math.MaxUint16 {
+		return nil, append(errs, fmt.Errorf("%s %d out of range [0, %d]", name, *v, math.MaxUint16))
+	}
+	n := uint16(*v)
+	return &n, errs
 }
 
 func canDeviceKindFromProto(kind simctlv1.CANDeviceKind) (sim.CANDeviceKind, error) {

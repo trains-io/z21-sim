@@ -28,6 +28,11 @@ service SimulatorService {
   // ListClients returns the Z21 LAN clients with an active session, ordered
   // by address.
   rpc ListClients(ListClientsRequest) returns (ListClientsResponse);
+
+  // SetSystemState changes the measured values the simulator reports in
+  // LAN_SYSTEMSTATE_DATACHANGED. Only the fields that are set change; if that
+  // changes the state, system-state subscribers get the new system state.
+  rpc SetSystemState(SetSystemStateRequest) returns (SetSystemStateResponse);
 }
 
 message BroadcastSystemStateRequest {}
@@ -81,6 +86,29 @@ message ListClientsRequest {}
 
 message ListClientsResponse {
   repeated Client clients = 1;
+}
+
+// SetSystemStateRequest holds the values to change (Z21 LAN spec §2.18).
+// Signed values must fit in int16, unsigned values in uint16.
+message SetSystemStateRequest {
+  // Current on the main track, mA.
+  optional int32 main_current_ma = 1;
+  // Current on the programming track, mA.
+  optional int32 prog_current_ma = 2;
+  // Smoothed current on the main track, mA.
+  optional int32 filtered_main_current_ma = 3;
+  // Internal temperature, °C.
+  optional int32 temperature_c = 4;
+  // Supply voltage, mV.
+  optional uint32 supply_voltage_mv = 5;
+  // Internal voltage, identical to track voltage, mV.
+  optional uint32 vcc_voltage_mv = 6;
+}
+
+message SetSystemStateResponse {
+  // Whether any value differed from the previous state.
+  bool changed = 1;
+  int32 recipient_count = 2;
 }
 
 // Client is the session of a Z21 LAN client.

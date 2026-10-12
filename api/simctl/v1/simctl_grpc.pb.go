@@ -24,6 +24,7 @@ const (
 	SimulatorService_NotifyCANDeviceDetected_FullMethodName = "/trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected"
 	SimulatorService_InjectRaw_FullMethodName               = "/trains.io.z21.simctl.v1.SimulatorService/InjectRaw"
 	SimulatorService_ListClients_FullMethodName             = "/trains.io.z21.simctl.v1.SimulatorService/ListClients"
+	SimulatorService_SetSystemState_FullMethodName          = "/trains.io.z21.simctl.v1.SimulatorService/SetSystemState"
 )
 
 // SimulatorServiceClient is the client API for SimulatorService service.
@@ -48,6 +49,10 @@ type SimulatorServiceClient interface {
 	// ListClients returns the Z21 LAN clients with an active session, ordered
 	// by address.
 	ListClients(ctx context.Context, in *ListClientsRequest, opts ...grpc.CallOption) (*ListClientsResponse, error)
+	// SetSystemState changes the measured values the simulator reports in
+	// LAN_SYSTEMSTATE_DATACHANGED. Only the fields that are set change; if that
+	// changes the state, system-state subscribers get the new system state.
+	SetSystemState(ctx context.Context, in *SetSystemStateRequest, opts ...grpc.CallOption) (*SetSystemStateResponse, error)
 }
 
 type simulatorServiceClient struct {
@@ -108,6 +113,16 @@ func (c *simulatorServiceClient) ListClients(ctx context.Context, in *ListClient
 	return out, nil
 }
 
+func (c *simulatorServiceClient) SetSystemState(ctx context.Context, in *SetSystemStateRequest, opts ...grpc.CallOption) (*SetSystemStateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetSystemStateResponse)
+	err := c.cc.Invoke(ctx, SimulatorService_SetSystemState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SimulatorServiceServer is the server API for SimulatorService service.
 // All implementations must embed UnimplementedSimulatorServiceServer
 // for forward compatibility.
@@ -130,6 +145,10 @@ type SimulatorServiceServer interface {
 	// ListClients returns the Z21 LAN clients with an active session, ordered
 	// by address.
 	ListClients(context.Context, *ListClientsRequest) (*ListClientsResponse, error)
+	// SetSystemState changes the measured values the simulator reports in
+	// LAN_SYSTEMSTATE_DATACHANGED. Only the fields that are set change; if that
+	// changes the state, system-state subscribers get the new system state.
+	SetSystemState(context.Context, *SetSystemStateRequest) (*SetSystemStateResponse, error)
 	mustEmbedUnimplementedSimulatorServiceServer()
 }
 
@@ -154,6 +173,9 @@ func (UnimplementedSimulatorServiceServer) InjectRaw(context.Context, *InjectRaw
 }
 func (UnimplementedSimulatorServiceServer) ListClients(context.Context, *ListClientsRequest) (*ListClientsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListClients not implemented")
+}
+func (UnimplementedSimulatorServiceServer) SetSystemState(context.Context, *SetSystemStateRequest) (*SetSystemStateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetSystemState not implemented")
 }
 func (UnimplementedSimulatorServiceServer) mustEmbedUnimplementedSimulatorServiceServer() {}
 func (UnimplementedSimulatorServiceServer) testEmbeddedByValue()                          {}
@@ -266,6 +288,24 @@ func _SimulatorService_ListClients_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SimulatorService_SetSystemState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetSystemStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SimulatorServiceServer).SetSystemState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SimulatorService_SetSystemState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SimulatorServiceServer).SetSystemState(ctx, req.(*SetSystemStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SimulatorService_ServiceDesc is the grpc.ServiceDesc for SimulatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -292,6 +332,10 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListClients",
 			Handler:    _SimulatorService_ListClients_Handler,
+		},
+		{
+			MethodName: "SetSystemState",
+			Handler:    _SimulatorService_SetSystemState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

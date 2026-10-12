@@ -396,6 +396,87 @@ func TestGRPCListClients(t *testing.T) {
 	}
 }
 
+func TestGRPCSetSystemState(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	c, err := client.Dial(udpAddr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagSystemState)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+
+	temperature, supply := int32(-5), uint32(18000)
+	resp, err := control.SetSystemState(ctx, &simctlv1.SetSystemStateRequest{TemperatureC: &temperature, SupplyVoltageMv: &supply})
+	if err != nil {
+		t.Fatalf("SetSystemState: %v", err)
+	}
+	if !resp.GetChanged() || resp.GetRecipientCount() != 1 {
+		t.Fatalf("response = %v, want changed and 1 recipient", resp)
+	}
+
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	state, err := protocol.SystemStateFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("SystemStateFromMessages: %v", err)
+	}
+	if state.Temperature != -5 || state.SupplyVoltage != 18000 || state.MainCurrent != 100 {
+		t.Fatalf("system state = %+v, want temperature -5, supply 18000, main current unchanged 100", state)
+	}
+
+	resp, err = control.SetSystemState(ctx, &simctlv1.SetSystemStateRequest{})
+	if err != nil {
+		t.Fatalf("SetSystemState without values: %v", err)
+	}
+	if resp.GetChanged() || resp.GetRecipientCount() != 0 {
+		t.Fatalf("response without values = %v, want unchanged and no recipients", resp)
+	}
+}
+
+func TestGRPCSetSystemStateOutOfRange(t *testing.T) {
+	simulator, _ := startSimulator(t)
+	control := startControl(t, simulator)
+
+	tooHot, tooHigh, ok := int32(40000), uint32(70000), int32(250)
+	tests := []struct {
+		name string
+		req  *simctlv1.SetSystemStateRequest
+	}{
+		{name: "int16 field", req: &simctlv1.SetSystemStateRequest{TemperatureC: &tooHot}},
+		{name: "uint16 field", req: &simctlv1.SetSystemStateRequest{VccVoltageMv: &tooHigh}},
+		{name: "valid and invalid together", req: &simctlv1.SetSystemStateRequest{MainCurrentMa: &ok, SupplyVoltageMv: &tooHigh}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if _, err := control.SetSystemState(ctx, tt.req); status.Code(err) != codes.InvalidArgument {
+				t.Fatalf("SetSystemState error = %v, want InvalidArgument", err)
+			}
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	resp, err := control.SetSystemState(ctx, &simctlv1.SetSystemStateRequest{MainCurrentMa: &ok})
+	if err != nil || !resp.GetChanged() {
+		t.Fatalf("SetSystemState(main current 250) = %v, %v; want changed (rejected requests must not apply)", resp, err)
+	}
+}
+
 func containsSystemStateBroadcast(msgs []protocol.Message) bool {
 	for _, msg := range msgs {
 		if protocol.IsSystemStateDataChanged(msg) {

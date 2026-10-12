@@ -57,6 +57,14 @@ func (s *Server) BroadcastSystemState() int {
 	return s.z21.Broadcast(protocol.BroadcastFlagSystemState, s.systemStateReply())
 }
 
+// SetSystemValues changes the measured system-state values and, if that
+// changed the state, broadcasts the new system state. It reports whether the
+// state changed and how many clients were notified. Used by the control API.
+func (s *Server) SetSystemValues(v SystemValues) (changed bool, recipients int) {
+	changes := s.state.SetSystemValues(v)
+	return len(changes) > 0, s.broadcast(changes)
+}
+
 // SetTrackPowerAndNotify switches track power and, if that changed the state,
 // broadcasts the change to all subscribed clients. Used by the control API.
 func (s *Server) SetTrackPowerAndNotify(on bool) bool {

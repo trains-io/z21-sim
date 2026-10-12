@@ -25,6 +25,31 @@ func TestNewState(t *testing.T) {
 	}
 }
 
+func TestStateSetSystemValues(t *testing.T) {
+	st := sim.NewState()
+	temperature, current := int16(55), int16(250)
+
+	changes := st.SetSystemValues(sim.SystemValues{Temperature: &temperature, MainCurrent: &current})
+	want := sim.NewState().System()
+	want.Temperature, want.MainCurrent = 55, 250
+	if got := st.System(); got != want {
+		t.Fatalf("System() = %+v, want %+v (other values unchanged)", got, want)
+	}
+	if len(changes) != 1 || changes[0].Flag != protocol.BroadcastFlagSystemState || len(changes[0].Messages) != 1 {
+		t.Fatalf("changes = %+v, want one system-state change", changes)
+	}
+	if state, err := protocol.ParseSystemState(changes[0].Messages[0].Data); err != nil || state != want {
+		t.Fatalf("broadcast system state = %+v, err=%v; want %+v", state, err, want)
+	}
+
+	if again := st.SetSystemValues(sim.SystemValues{Temperature: &temperature}); again != nil {
+		t.Fatalf("SetSystemValues with the same value = %+v, want no changes", again)
+	}
+	if none := st.SetSystemValues(sim.SystemValues{}); none != nil {
+		t.Fatalf("SetSystemValues without values = %+v, want no changes", none)
+	}
+}
+
 func TestStateSetTrackPower(t *testing.T) {
 	tests := []struct {
 		name         string
