@@ -35,7 +35,9 @@ func newSystemSetCmd(a *app) *cobra.Command {
 		Short: "Change measured system-state values",
 		Long: "Change the currents, voltages and temperature the simulator reports in\n" +
 			"LAN_SYSTEMSTATE_DATACHANGED. Values that are not given stay unchanged; if\n" +
-			"anything changes, system-state subscribers get the new state.",
+			"anything changes, system-state subscribers get the new state.\n\n" +
+			"While track power is off, the currents and the VCC (track) voltage are\n" +
+			"reported as 0; values set meanwhile are reported once power is on again.",
 		Example: "  z21-sim-ctl system set --main-current 1200 --temperature 55\n" +
 			"  z21-sim-ctl system set --supply-voltage 18000 --vcc-voltage 16500",
 		Args: cobra.NoArgs,

@@ -31,7 +31,9 @@ service SimulatorService {
 
   // SetSystemState changes the measured values the simulator reports in
   // LAN_SYSTEMSTATE_DATACHANGED. Only the fields that are set change; if that
-  // changes the state, system-state subscribers get the new system state.
+  // changes the reported state, system-state subscribers get the new system
+  // state. While track power is off, the currents and the VCC voltage are
+  // reported as zero; values set meanwhile are reported once power is on.
   rpc SetSystemState(SetSystemStateRequest) returns (SetSystemStateResponse);
 }
 
@@ -106,7 +108,7 @@ message SetSystemStateRequest {
 }
 
 message SetSystemStateResponse {
-  // Whether any value differed from the previous state.
+  // Whether the reported system state changed.
   bool changed = 1;
   int32 recipient_count = 2;
 }

@@ -649,7 +649,7 @@ func (x *SetSystemStateRequest) GetVccVoltageMv() uint32 {
 
 type SetSystemStateResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Whether any value differed from the previous state.
+	// Whether the reported system state changed.
 	Changed        bool  `protobuf:"varint,1,opt,name=changed,proto3" json:"changed,omitempty"`
 	RecipientCount int32 `protobuf:"varint,2,opt,name=recipient_count,json=recipientCount,proto3" json:"recipient_count,omitempty"`
 	unknownFields  protoimpl.UnknownFields

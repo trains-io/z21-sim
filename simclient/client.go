@@ -72,8 +72,9 @@ type SystemValues struct {
 }
 
 // SetSystemState changes the measured system-state values. It reports
-// whether the state changed and how many system-state subscribers were
-// notified.
+// whether the reported state changed and how many system-state subscribers
+// were notified. While track power is off, the currents and the VCC voltage
+// are reported as zero; values set meanwhile are reported once power is on.
 func (c *Client) SetSystemState(ctx context.Context, v SystemValues) (changed bool, recipients int, err error) {
 	resp, err := c.svc.SetSystemState(ctx, &simctlv1.SetSystemStateRequest{
 		MainCurrentMa:         widen[int16, int32](v.MainCurrent),

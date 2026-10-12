@@ -51,7 +51,9 @@ type SimulatorServiceClient interface {
 	ListClients(ctx context.Context, in *ListClientsRequest, opts ...grpc.CallOption) (*ListClientsResponse, error)
 	// SetSystemState changes the measured values the simulator reports in
 	// LAN_SYSTEMSTATE_DATACHANGED. Only the fields that are set change; if that
-	// changes the state, system-state subscribers get the new system state.
+	// changes the reported state, system-state subscribers get the new system
+	// state. While track power is off, the currents and the VCC voltage are
+	// reported as zero; values set meanwhile are reported once power is on.
 	SetSystemState(ctx context.Context, in *SetSystemStateRequest, opts ...grpc.CallOption) (*SetSystemStateResponse, error)
 }
 
@@ -147,7 +149,9 @@ type SimulatorServiceServer interface {
 	ListClients(context.Context, *ListClientsRequest) (*ListClientsResponse, error)
 	// SetSystemState changes the measured values the simulator reports in
 	// LAN_SYSTEMSTATE_DATACHANGED. Only the fields that are set change; if that
-	// changes the state, system-state subscribers get the new system state.
+	// changes the reported state, system-state subscribers get the new system
+	// state. While track power is off, the currents and the VCC voltage are
+	// reported as zero; values set meanwhile are reported once power is on.
 	SetSystemState(context.Context, *SetSystemStateRequest) (*SetSystemStateResponse, error)
 	mustEmbedUnimplementedSimulatorServiceServer()
 }

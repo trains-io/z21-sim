@@ -50,6 +50,43 @@ func TestStateSetSystemValues(t *testing.T) {
 	}
 }
 
+func TestStateTrackPowerOffReportsNoLoad(t *testing.T) {
+	st := sim.NewState()
+	live := st.System()
+
+	changes := st.SetTrackPower(false)
+	off := st.System()
+	want := live
+	want.CentralState = protocol.CentralStateTrackVoltageOff
+	want.MainCurrent, want.ProgCurrent, want.FilteredMainCurrent, want.VCCVoltage = 0, 0, 0, 0
+	if off != want {
+		t.Fatalf("System() with track power off = %+v, want %+v (no currents, no track voltage; supply and temperature kept)", off, want)
+	}
+	if state, err := protocol.ParseSystemState(changes[1].Messages[0].Data); err != nil || state != want {
+		t.Fatalf("system state broadcast = %+v, err=%v; want %+v", state, err, want)
+	}
+
+	current, vcc := int16(1500), uint16(16500)
+	if changes := st.SetSystemValues(sim.SystemValues{MainCurrent: &current, VCCVoltage: &vcc}); changes != nil {
+		t.Fatalf("SetSystemValues(current, VCC) with track power off = %+v, want no changes (not reported)", changes)
+	}
+	if got := st.System(); got != want {
+		t.Fatalf("System() = %+v, want still %+v", got, want)
+	}
+
+	temperature := int16(30)
+	if changes := st.SetSystemValues(sim.SystemValues{Temperature: &temperature}); len(changes) != 1 {
+		t.Fatalf("SetSystemValues(temperature) with track power off = %+v, want one system-state change", changes)
+	}
+
+	st.SetTrackPower(true)
+	want = live
+	want.MainCurrent, want.VCCVoltage, want.Temperature = 1500, 16500, 30
+	if got := st.System(); got != want {
+		t.Fatalf("System() after track power on = %+v, want %+v (values set while off)", got, want)
+	}
+}
+
 func TestStateSetTrackPower(t *testing.T) {
 	tests := []struct {
 		name         string

@@ -25,7 +25,9 @@ type Change struct {
 // API change it through its methods, which return the broadcasts the change
 // causes, so both produce the same broadcasts. It is safe for concurrent use.
 type State struct {
-	mu         sync.Mutex
+	mu sync.Mutex
+	// system holds the values measured while the track is live; clients see
+	// them through reportedLocked.
 	system     protocol.SystemState
 	canDevices map[uint16]CANDevice
 }
@@ -47,10 +49,21 @@ func NewState() *State {
 }
 
 // System returns the system state as reported by LAN_SYSTEMSTATE_DATACHANGED.
+// While the track voltage is off, the currents and the VCC (track) voltage
+// are reported as zero.
 func (st *State) System() protocol.SystemState {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	return st.system
+	return st.reportedLocked()
+}
+
+func (st *State) reportedLocked() protocol.SystemState {
+	s := st.system
+	if s.CentralState&protocol.CentralStateTrackVoltageOff != 0 {
+		s.MainCurrent, s.ProgCurrent, s.FilteredMainCurrent = 0, 0, 0
+		s.VCCVoltage = 0
+	}
+	return s
 }
 
 // TrackPower reports whether the track voltage is on.
@@ -69,18 +82,20 @@ type SystemValues struct {
 	VCCVoltage          *uint16 // mV
 }
 
-// SetSystemValues changes the measured values. If that changes the state,
-// system-state subscribers get the new system state.
+// SetSystemValues changes the measured values. If that changes the reported
+// state, system-state subscribers get the new system state. While the track
+// voltage is off, currents and VCC voltage are kept and reported once the
+// track voltage is back on.
 func (st *State) SetSystemValues(v SystemValues) []Change {
 	st.mu.Lock()
-	before := st.system
+	before := st.reportedLocked()
 	setIfNotNil(&st.system.MainCurrent, v.MainCurrent)
 	setIfNotNil(&st.system.ProgCurrent, v.ProgCurrent)
 	setIfNotNil(&st.system.FilteredMainCurrent, v.FilteredMainCurrent)
 	setIfNotNil(&st.system.Temperature, v.Temperature)
 	setIfNotNil(&st.system.SupplyVoltage, v.SupplyVoltage)
 	setIfNotNil(&st.system.VCCVoltage, v.VCCVoltage)
-	system := st.system
+	system := st.reportedLocked()
 	st.mu.Unlock()
 
 	if system == before {
@@ -110,7 +125,7 @@ func (st *State) SetTrackPower(on bool) []Change {
 	} else {
 		st.system.CentralState |= protocol.CentralStateTrackVoltageOff
 	}
-	system := st.system
+	system := st.reportedLocked()
 	st.mu.Unlock()
 
 	if system.CentralState == before {
