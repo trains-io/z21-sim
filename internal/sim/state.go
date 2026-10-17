@@ -6,9 +6,11 @@ import (
 	"github.com/trains-io/z21.go/protocol"
 )
 
+// Defaults of a Z21 on its 18 V power supply; the track voltage (VCC) is a
+// little lower than the supply voltage.
 const (
-	defaultSupplyVoltageMV = 10000
-	defaultVCCVoltageMV    = 1000
+	defaultSupplyVoltageMV = 18000
+	defaultVCCVoltageMV    = 17500
 	defaultMainCurrentMA   = 100
 	defaultTemperatureC    = 42
 )

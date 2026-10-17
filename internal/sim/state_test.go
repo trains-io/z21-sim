@@ -16,8 +16,8 @@ func TestNewState(t *testing.T) {
 		MainCurrent:         100,
 		FilteredMainCurrent: 80,
 		Temperature:         42,
-		SupplyVoltage:       10000,
-		VCCVoltage:          1000,
+		SupplyVoltage:       18000,
+		VCCVoltage:          17500,
 		Capabilities:        protocol.CapabilityDCC | protocol.CapabilityLocoCmds | protocol.CapabilityAccessoryCmds,
 	}
 	if got := st.System(); got != want {

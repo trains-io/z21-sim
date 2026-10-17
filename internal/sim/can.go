@@ -11,7 +11,7 @@ import (
 
 const (
 	defaultDetectorOccupancy = 0x0100 // free with voltage
-	defaultBoosterVCCmV      = 10000
+	defaultBoosterVCCmV      = 17500
 	defaultBoosterCurrentmA  = 100
 
 	// maxCANDetectorPorts follows from the one-byte port in LAN_CAN_DETECTOR.
