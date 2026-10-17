@@ -8,7 +8,7 @@ Thanks for contributing to [github.com/trains-io/z21-sim](https://github.com/tra
 |------|---------|---------|
 | Go | 1.24+ | Build and test |
 | Docker | recent | Integration tests and container image |
-| [grpcurl](https://github.com/fullstorydev/grpcurl) | recent | Manual gRPC control-plane testing |
+| [grpcurl](https://github.com/fullstorydev/grpcurl) | optional | Calling the gRPC control API directly, bypassing `z21-sim-ctl` |
 | [buf](https://buf.build/docs/installation) + `protoc-gen-go`, `protoc-gen-go-grpc` | optional | Regenerate gRPC stubs (`make proto`), lint and breaking-change checks (`make proto-lint`, `make proto-breaking`) |
 
 For end-to-end LAN testing, [z21cli](https://github.com/trains-io/z21cli) is useful but not required.
@@ -18,13 +18,14 @@ For end-to-end LAN testing, [z21cli](https://github.com/trains-io/z21cli) is use
 From the repository root:
 
 ```bash
-make build    # bin/z21-sim
+make build    # bin/z21-sim and bin/z21-sim-ctl
 ```
 
-Equivalent manual command:
+Equivalent manual commands:
 
 ```bash
 go build -o bin/z21-sim ./cmd/z21-sim
+go build -o bin/z21-sim-ctl ./cmd/z21-sim-ctl
 ```
 
 ## Test
@@ -92,147 +93,88 @@ make run-trace
 
 With `-trace`, incoming gRPC requests and outgoing LAN broadcasts are printed on stderr (even when no UDP client is subscribed).
 
-## Test the gRPC control plane with grpcurl
+## Control the simulator with z21-sim-ctl
 
-The control API is defined in [`api/simctl/v1/simctl.proto`](api/simctl/v1/simctl.proto). The simulator does not enable gRPC server reflection, so grpcurl needs the proto file on the command line.
+`z21-sim-ctl` changes the state of a running simulator through its gRPC control API (defined in [`api/simctl/v1/simctl.proto`](api/simctl/v1/simctl.proto)). Z21 LAN clients subscribed to the matching broadcasts see the changes, as they would with real hardware.
 
-Install grpcurl (examples):
+Global flags:
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `--addr` | `127.0.0.1:50051` | Control API address of the simulator (env `Z21_SIM_CTL_ADDR`) |
+| `-o`, `--output` | `text` | Output format: `text` or `json` |
+| `--timeout` | `5s` | Timeout per request |
+
+Run `./bin/z21-sim-ctl <command> --help` for the broadcasts each command sends. Commands that broadcast report how many clients received the message (0 if nobody is subscribed).
+
+### Track power, emergency stop and short circuit
 
 ```bash
-go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+./bin/z21-sim-ctl power off
+./bin/z21-sim-ctl power on
+./bin/z21-sim-ctl stop                      # emergency stop, track voltage stays on
+./bin/z21-sim-ctl short-circuit             # on the Z21's own track output
+./bin/z21-sim-ctl short-circuit --external  # on a booster output
 ```
 
-Set a convenience variable for the repo root:
+`power on` ends an emergency stop and a short circuit. Subscribe to `XPRESSNET_UPDATES` for `LAN_X_BC_*` messages, to `SYSTEM_UPDATES` for `LAN_SYSTEMSTATE_DATACHANGED`.
+
+### System state
+
+Change the currents (mA), voltages (mV) and temperature (°C) reported in `LAN_SYSTEMSTATE_DATACHANGED`; values not given stay unchanged:
 
 ```bash
-REPO_ROOT="$(pwd)"
-GRPC_ADDR=127.0.0.1:50051
+./bin/z21-sim-ctl system set --main-current 1200 --temperature 55
+./bin/z21-sim-ctl system set --supply-voltage 18000 --vcc-voltage 16500
+./bin/z21-sim-ctl system broadcast          # resend the current state
 ```
 
-Common grpcurl options used below:
+While track power is off, the currents and the VCC (track) voltage are reported as 0.
 
-- `-plaintext` — no TLS (local development only)
-- `-import-path "$REPO_ROOT"` — proto import root
-- `-proto api/simctl/v1/simctl.proto` — service definition
+### CAN devices
 
-### List services and methods
+Plug in a CAN occupancy detector (all ports free) or a booster, emulating hot-plug detection. NetIDs and numeric flags accept decimal or `0x` hex; a device with the same NetID is replaced.
 
 ```bash
-grpcurl -plaintext \
-  -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/simctl.proto \
-  list
+./bin/z21-sim-ctl can add detector 0xdb04 --name "Block 4" --module-addr 60 --ports 2
+./bin/z21-sim-ctl can add booster 0xbc01 --name "Booster 1" --output-port 1
+```
 
-grpcurl -plaintext \
-  -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/simctl.proto \
+Subscribe to `CAN_DETECTOR_UPDATES` or `CAN_BOOSTER_UPDATES` respectively.
+
+### Clients
+
+List the LAN clients with an active session, their broadcast flags and subscribed locos:
+
+```bash
+./bin/z21-sim-ctl clients
+./bin/z21-sim-ctl -o json clients
+```
+
+### In the container
+
+The image includes `z21-sim-ctl`; the control API listens on 127.0.0.1 inside the container:
+
+```bash
+docker exec <container> z21-sim-ctl power off
+```
+
+### Calling the API directly with grpcurl
+
+To debug the control API itself, call it with [grpcurl](https://github.com/fullstorydev/grpcurl). The simulator does not enable gRPC server reflection, so grpcurl needs the proto file:
+
+```bash
+grpcurl -plaintext -import-path . -proto api/simctl/v1/simctl.proto \
   describe trains.io.z21.simctl.v1.SimulatorService
-```
 
-### BroadcastSystemState
-
-Emits `LAN_SYSTEMSTATE_DATACHANGED` to clients subscribed to system-state updates.
-
-```bash
-grpcurl -plaintext \
-  -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/simctl.proto \
-  -d '{}' \
-  "$GRPC_ADDR" \
-  trains.io.z21.simctl.v1.SimulatorService/BroadcastSystemState
-```
-
-Example response:
-
-```json
-{
-  "recipientCount": "1"
-}
-```
-
-`recipientCount` is the number of UDP clients that received the broadcast (0 if nobody is subscribed).
-
-### SetTrackPower
-
-Turns track power on or off and emits unsolicited XpressNet and system-state broadcasts.
-
-```bash
-# Track off
-grpcurl -plaintext \
-  -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/simctl.proto \
+grpcurl -plaintext -import-path . -proto api/simctl/v1/simctl.proto \
   -d '{"on": false}' \
-  "$GRPC_ADDR" \
-  trains.io.z21.simctl.v1.SimulatorService/SetTrackPower
-
-# Track on
-grpcurl -plaintext \
-  -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/simctl.proto \
-  -d '{"on": true}' \
-  "$GRPC_ADDR" \
-  trains.io.z21.simctl.v1.SimulatorService/SetTrackPower
+  127.0.0.1:50051 trains.io.z21.simctl.v1.SimulatorService/SetTrackPower
 ```
 
-Example response:
+## End-to-end: z21-sim-ctl + LAN client
 
-```json
-{
-  "on": true,
-  "changed": true
-}
-```
-
-### NotifyCANDeviceDetected
-
-Registers a CAN device and broadcasts its initial status, emulating hot-plug detection.
-
-**Detector** — NetID `0xDB04` (56068), module address 60, two ports:
-
-```bash
-grpcurl -plaintext \
-  -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/simctl.proto \
-  -d '{
-    "netId": 56068,
-    "kind": "CAN_DEVICE_KIND_DETECTOR",
-    "name": "Block 4",
-    "moduleAddr": 60,
-    "portCount": 2
-  }' \
-  "$GRPC_ADDR" \
-  trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected
-```
-
-**Booster** — NetID `0xBC01` (48129):
-
-```bash
-grpcurl -plaintext \
-  -import-path "$REPO_ROOT" \
-  -proto api/simctl/v1/simctl.proto \
-  -d '{
-    "netId": 48129,
-    "kind": "CAN_DEVICE_KIND_BOOSTER",
-    "name": "Booster 1",
-    "outputPort": 1
-  }' \
-  "$GRPC_ADDR" \
-  trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected
-```
-
-Example response:
-
-```json
-{
-  "recipientCount": "1"
-}
-```
-
-grpcurl accepts camelCase JSON field names (`netId`, `moduleAddr`, …) as shown above. Snake_case (`net_id`, `module_addr`, …) also works.
-
-## End-to-end: gRPC injection + LAN client
-
-This workflow verifies that a control-plane RPC produces LAN traffic a Z21 client can see.
+This workflow verifies that a control-plane command produces LAN traffic a Z21 client can see.
 
 **Terminal 1 — simulator with trace:**
 
@@ -248,21 +190,19 @@ make run-trace
 ./bin/z21 monitor
 ```
 
-**Terminal 3 — inject a detector via grpcurl:**
+**Terminal 3 — plug in a detector:**
 
 ```bash
-grpcurl -plaintext \
-  -import-path "$(pwd)" \
-  -proto api/simctl/v1/simctl.proto \
-  -d '{"netId":56068,"kind":"CAN_DEVICE_KIND_DETECTOR","name":"Block 4","moduleAddr":60,"portCount":2}' \
-  127.0.0.1:50051 \
-  trains.io.z21.simctl.v1.SimulatorService/NotifyCANDeviceDetected
+./bin/z21-sim-ctl can add detector 0xdb04 --name "Block 4" --module-addr 60 --ports 2
+# detector 0xdb04 added, sent to 1 clients
 ```
 
 Expected results:
 
 - **Terminal 1** (`-trace`): gRPC request dump, then `LAN >> broadcast CAN detector -> …` with `LAN_CAN_DETECTOR` payloads.
 - **Terminal 2** (`monitor`): lines such as `[CAN] Detector 0xDB04 module 60 port 1: free (LAN_CAN_DETECTOR)`.
+
+`z21 monitor` does not send keep-alives, so the simulator drops its session after 60 s without other traffic; run it again if broadcasts stop arriving.
 
 For system-state or track-power events, subscribe to `SYSTEM_UPDATES` or `XPRESSNET_UPDATES` instead of `CAN_DETECTOR_UPDATES`.
 
