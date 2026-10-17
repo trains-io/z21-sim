@@ -6,13 +6,20 @@ import (
 )
 
 const (
-	xHeaderGetVersion        byte = 0x21
+	// xHeaderSystem is the X-header shared by the commands below it.
+	xHeaderSystem            byte = 0x21
+	xCommandGetVersion       byte = 0x21
 	xCommandGetStatus        byte = 0x24
 	xCommandSetTrackPowerOff byte = 0x80
 	xCommandSetTrackPowerOn  byte = 0x81
 	xHeaderSetStop           byte = 0x80
 	xCommandGetFirmware      byte = 0xF1
 	xFirmwareDB0             byte = 0x0A
+
+	// xBusVersion (BCD) and commandStationIDZ21 are what every Z21 reports in
+	// LAN_X_GET_VERSION (spec §2.3).
+	xBusVersion         byte = 0x30
+	commandStationIDZ21 byte = 0x12
 )
 
 // trackPowerHandler switches track power; the requester always gets the track
@@ -45,6 +52,10 @@ func confirmAndNotify(w server.ResponseWriter, c server.Client, changes []Change
 // does.
 func (s *Server) xFirmwareReply() protocol.Message {
 	return protocol.EncodeXFirmware(protocol.XFirmware{VersionMSB: byte(s.identity.Firmware >> 8), VersionLSB: byte(s.identity.Firmware)})
+}
+
+func xVersionReply() protocol.Message {
+	return protocol.EncodeXVersion(protocol.XVersion{XBusVersion: xBusVersion, CommandStationID: commandStationIDZ21})
 }
 
 func (s *Server) xStatusReply() protocol.Message {

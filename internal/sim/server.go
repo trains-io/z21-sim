@@ -105,9 +105,10 @@ func (s *Server) mux() *server.Mux {
 	m.Handle(protocol.HeaderLANGetCode, reply(s.codeReply))
 	m.Handle(protocol.HeaderLANSystemStateGetData, reply(s.systemStateReply))
 
-	m.HandleLANXDB0(xHeaderGetVersion, xCommandGetStatus, reply(s.xStatusReply))
-	m.HandleLANXDB0(xHeaderGetVersion, xCommandSetTrackPowerOff, s.trackPowerHandler(false))
-	m.HandleLANXDB0(xHeaderGetVersion, xCommandSetTrackPowerOn, s.trackPowerHandler(true))
+	m.HandleLANXDB0(xHeaderSystem, xCommandGetVersion, reply(xVersionReply))
+	m.HandleLANXDB0(xHeaderSystem, xCommandGetStatus, reply(s.xStatusReply))
+	m.HandleLANXDB0(xHeaderSystem, xCommandSetTrackPowerOff, s.trackPowerHandler(false))
+	m.HandleLANXDB0(xHeaderSystem, xCommandSetTrackPowerOn, s.trackPowerHandler(true))
 	m.HandleLANX(xHeaderSetStop, s.stopHandler())
 	m.HandleLANXDB0(xCommandGetFirmware, xFirmwareDB0, reply(s.xFirmwareReply))
 

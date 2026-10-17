@@ -235,6 +235,32 @@ func TestGetXFirmware(t *testing.T) {
 	}
 }
 
+func TestGetXVersion(t *testing.T) {
+	_, addr := startTestServer(t)
+
+	c, err := client.Dial(addr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	msgs, err := c.Call(ctx, protocol.GetXVersion())
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	got, err := protocol.XVersionFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("XVersionFromMessages: %v", err)
+	}
+	if want := (protocol.XVersion{XBusVersion: 0x30, CommandStationID: 0x12}); got != want {
+		t.Fatalf("XVersion = %+v, want %+v (X-Bus 3.0, Z21)", got, want)
+	}
+}
+
 func TestGetXStatus(t *testing.T) {
 	_, addr := startTestServer(t)
 
