@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/trains-io/z21-sim/simclient"
 )
 
@@ -53,6 +54,8 @@ func NewRootCmd() *cobra.Command {
 	flags.StringVar(&a.addr, "addr", addr, "control API address of z21-sim (env "+EnvAddr+")")
 	flags.DurationVar(&a.timeout, "timeout", 5*time.Second, "timeout per request")
 	flags.StringVarP(&a.output, "output", "o", outputText, "output format: text or json")
+	_ = root.RegisterFlagCompletionFunc("output", cobra.FixedCompletions(
+		[]string{outputText, outputJSON}, cobra.ShellCompDirectiveNoFileComp))
 
 	root.AddCommand(
 		newPowerCmd(a),
@@ -62,7 +65,28 @@ func NewRootCmd() *cobra.Command {
 		newCANCmd(a),
 		newClientsCmd(a),
 	)
+	disableFileCompletion(root)
 	return root
+}
+
+// disableFileCompletion stops shells from offering file names for arguments
+// and flag values of cmd and its subcommands that have no completion of their
+// own: no command takes a file.
+func disableFileCompletion(cmd *cobra.Command) {
+	if cmd.ValidArgsFunction == nil && len(cmd.ValidArgs) == 0 {
+		cmd.ValidArgsFunction = cobra.NoFileCompletions
+	}
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if f.NoOptDefVal != "" {
+			return
+		}
+		if _, ok := cmd.GetFlagCompletionFunc(f.Name); !ok {
+			_ = cmd.RegisterFlagCompletionFunc(f.Name, cobra.NoFileCompletions)
+		}
+	})
+	for _, sub := range cmd.Commands() {
+		disableFileCompletion(sub)
+	}
 }
 
 // withClient runs fn with a control API client and a context bounded by

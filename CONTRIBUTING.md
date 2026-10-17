@@ -105,6 +105,12 @@ Global flags:
 | `-o`, `--output` | `text` | Output format: `text` or `json` |
 | `--timeout` | `5s` | Timeout per request |
 
+Shell completion (bash needs the `bash-completion` package):
+
+```bash
+source <(./bin/z21-sim-ctl completion bash)   # or zsh, fish, powershell
+```
+
 Run `./bin/z21-sim-ctl <command> --help` for the broadcasts each command sends. Commands that broadcast report how many clients received the message (0 if nobody is subscribed).
 
 ### Track power, emergency stop and short circuit

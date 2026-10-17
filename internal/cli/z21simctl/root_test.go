@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -315,4 +316,52 @@ func TestErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompletion(t *testing.T) {
+	const noFileComp = ":4"
+
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{name: "power state", args: []string{"power", ""}, want: []string{"on", "off"}},
+		{name: "output format", args: []string{"-o", ""}, want: []string{"text", "json"}},
+		{name: "output format of subcommand", args: []string{"clients", "--output", ""}, want: []string{"text", "json"}},
+		{name: "no args", args: []string{"stop", ""}},
+		{name: "NETID", args: []string{"can", "add", "detector", ""}},
+		{name: "addr", args: []string{"--addr", ""}},
+		{name: "timeout of subcommand", args: []string{"power", "--timeout", ""}},
+		{name: "numeric flag", args: []string{"system", "set", "--main-current", ""}},
+		{name: "name flag", args: []string{"can", "add", "booster", "1", "--name", ""}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := complete(t, tt.args...)
+			lines := strings.Split(strings.TrimSpace(out), "\n")
+			if n := len(lines); n == 0 || lines[n-1] != noFileComp {
+				t.Fatalf("output = %q, want it to end with directive %s (no file completion)", out, noFileComp)
+			}
+			got := lines[:len(lines)-1]
+			if strings.Join(got, ",") != strings.Join(tt.want, ",") {
+				t.Fatalf("completions = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// complete returns the standard output of the hidden __complete command that
+// the shell completion scripts call.
+func complete(t *testing.T, args ...string) string {
+	t.Helper()
+	cmd := z21simctl.NewRootCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs(append([]string{"__complete"}, args...))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("z21-sim-ctl __complete %s: %v", strings.Join(args, " "), err)
+	}
+	return out.String()
 }
