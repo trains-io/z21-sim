@@ -1,19 +1,31 @@
 package sim
 
-import "github.com/trains-io/z21.go/protocol"
+import (
+	"errors"
+	"fmt"
 
-// locoInfoSpeedSteps128 is 128 speed steps in LAN_X_LOCO_INFO (spec §4.4);
-// LAN_X_SET_LOCO_DRIVE uses protocol.LocoSpeedSteps128 instead.
-const locoInfoSpeedSteps128 byte = 0x04
+	"github.com/trains-io/z21.go/protocol"
+)
 
-// locoSpeedEStop is the speed value of an emergency stop in all speed step
-// modes (spec §4.2).
-const locoSpeedEStop byte = 0x01
+// MaxLocoAddress is the highest loco address of a Z21.
+const MaxLocoAddress = 9999
+
+// ErrInvalidLoco is returned by SetLoco for a change it cannot apply.
+var ErrInvalidLoco = errors.New("z21-sim: invalid loco change")
+
+// LocoChange is a change to a loco made by a throttle outside the Z21 LAN.
+// Nil fields and functions missing from Functions stay unchanged.
+type LocoChange struct {
+	SpeedSteps *byte          // protocol.LocoSpeedSteps*
+	Speed      *uint8         // speed step, 0 stops; at most protocol.MaxLocoSpeedStep
+	Forward    *bool          // direction
+	Functions  map[uint8]bool // F0–F31, on or off
+}
 
 // defaultLoco is a loco nobody has driven yet: DCC with 128 speed steps,
 // forward, stopped, all functions off, as in ZIMO's simulator.
 func defaultLoco(addr uint16) protocol.LocoInfo {
-	return protocol.LocoInfo{Address: addr, SpeedSteps: locoInfoSpeedSteps128, Forward: true}
+	return protocol.LocoInfo{Address: addr, SpeedSteps: protocol.LocoInfoSpeedSteps128, Forward: true}
 }
 
 // Loco returns the state of the loco with addr, as reported by
@@ -29,7 +41,7 @@ func (st *State) Loco(addr uint16) protocol.LocoInfo {
 // the loco's subscribers learn about changes only.
 func (st *State) DriveLoco(d protocol.LocoDrive) (protocol.LocoInfo, bool) {
 	return st.updateLoco(d.Address, func(info *protocol.LocoInfo) {
-		info.SpeedSteps = locoInfoSpeedSteps(d.SpeedSteps)
+		info.SpeedSteps = protocol.LocoInfoSpeedSteps(d.SpeedSteps)
 		info.Forward = d.Forward
 		info.Speed = d.Speed
 	})
@@ -45,7 +57,7 @@ func (st *State) SetLocoFunction(addr uint16, fn uint8, action protocol.LocoFunc
 			return
 		}
 		bit := uint32(1) << fn
-		f := locoFunctions(*info)
+		f := LocoFunctions(*info)
 		switch action {
 		case protocol.LocoFunctionOn:
 			f |= bit
@@ -65,7 +77,7 @@ func (st *State) SetLocoFunction(addr uint16, fn uint8, action protocol.LocoFunc
 func (st *State) SetLocoFunctionGroup(addr uint16, group protocol.LocoFunctionGroup, functions byte) (protocol.LocoInfo, bool) {
 	mask, bits := locoFunctionGroupBits(group, functions)
 	return st.updateLoco(addr, func(info *protocol.LocoInfo) {
-		setLocoFunctions(info, locoFunctions(*info)&^mask|bits)
+		setLocoFunctions(info, LocoFunctions(*info)&^mask|bits)
 	})
 }
 
@@ -73,8 +85,67 @@ func (st *State) SetLocoFunctionGroup(addr uint16, group protocol.LocoFunctionGr
 // does. It returns the new state and whether it changed.
 func (st *State) EStopLoco(addr uint16) (protocol.LocoInfo, bool) {
 	return st.updateLoco(addr, func(info *protocol.LocoInfo) {
-		info.Speed = locoSpeedEStop
+		info.Speed = protocol.LocoSpeedEStop
 	})
+}
+
+// SetLoco applies c to addr (1–MaxLocoAddress). A new speed step mode without
+// a new speed keeps the speed step, or the emergency stop. It returns the new
+// state and whether it changed, or an error wrapping ErrInvalidLoco, leaving
+// the loco unchanged.
+func (st *State) SetLoco(addr uint16, c LocoChange) (protocol.LocoInfo, bool, error) {
+	if addr == 0 || addr > MaxLocoAddress {
+		return protocol.LocoInfo{}, false, fmt.Errorf("%w: address %d out of range [1, %d]", ErrInvalidLoco, addr, MaxLocoAddress)
+	}
+	if c.SpeedSteps != nil && protocol.MaxLocoSpeedStep(*c.SpeedSteps) == 0 {
+		return protocol.LocoInfo{}, false, fmt.Errorf("%w: unknown speed steps %#02x", ErrInvalidLoco, *c.SpeedSteps)
+	}
+	for fn := range c.Functions {
+		if fn > 31 {
+			return protocol.LocoInfo{}, false, fmt.Errorf("%w: function F%d out of range [F0, F31]", ErrInvalidLoco, fn)
+		}
+	}
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	before := st.locoLocked(addr)
+	after := before
+
+	speedSteps := protocol.LocoDriveSpeedSteps(before.SpeedSteps)
+	step, eStop := protocol.DecodeLocoSpeed(speedSteps, before.Speed)
+	if c.SpeedSteps != nil {
+		speedSteps = *c.SpeedSteps
+		after.SpeedSteps = protocol.LocoInfoSpeedSteps(speedSteps)
+	}
+	if c.Speed != nil {
+		step, eStop = *c.Speed, false
+	}
+	if eStop {
+		after.Speed = protocol.LocoSpeedEStop
+	} else {
+		speed, err := protocol.EncodeLocoSpeed(speedSteps, step)
+		if err != nil {
+			return protocol.LocoInfo{}, false, fmt.Errorf("%w: %v", ErrInvalidLoco, err)
+		}
+		after.Speed = speed
+	}
+
+	if c.Forward != nil {
+		after.Forward = *c.Forward
+	}
+
+	f := LocoFunctions(after)
+	for fn, on := range c.Functions {
+		if on {
+			f |= 1 << fn
+		} else {
+			f &^= 1 << fn
+		}
+	}
+	setLocoFunctions(&after, f)
+
+	st.locos[addr] = after
+	return after, after != before, nil
 }
 
 // PurgeLoco forgets addr, as LAN_X_PURGE_LOCO does: it is a default loco
@@ -103,8 +174,8 @@ func (st *State) locoLocked(addr uint16) protocol.LocoInfo {
 	return defaultLoco(addr)
 }
 
-// locoFunctions returns the functions of info as a bit mask, F0 in bit 0.
-func locoFunctions(info protocol.LocoInfo) uint32 {
+// LocoFunctions returns the functions of info as a bit mask, F0 in bit 0.
+func LocoFunctions(info protocol.LocoInfo) uint32 {
 	f := uint32(info.FunctionsF1F4&0x0F)<<1 |
 		uint32(info.FunctionsF5F12)<<5 |
 		uint32(info.FunctionsF13F20)<<13 |
@@ -146,13 +217,4 @@ func locoFunctionGroupBits(group protocol.LocoFunctionGroup, functions byte) (ma
 	default:
 		return 0, 0
 	}
-}
-
-// locoInfoSpeedSteps converts speed steps of LAN_X_SET_LOCO_DRIVE to those of
-// LAN_X_LOCO_INFO.
-func locoInfoSpeedSteps(drive byte) byte {
-	if drive == protocol.LocoSpeedSteps128 {
-		return locoInfoSpeedSteps128
-	}
-	return drive
 }

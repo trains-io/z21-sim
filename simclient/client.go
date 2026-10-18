@@ -179,12 +179,96 @@ func (c *Client) SetSystemState(ctx context.Context, v SystemValues) (changed bo
 	return resp.GetChanged(), int(resp.GetRecipientCount()), nil
 }
 
-func widen[From int16 | uint16, To int32 | uint32](v *From) *To {
+func widen[From int16 | uint8 | uint16, To int32 | uint32](v *From) *To {
 	if v == nil {
 		return nil
 	}
 	w := To(*v)
 	return &w
+}
+
+// SpeedSteps is the speed step mode of a loco: 14, 28 or 128.
+type SpeedSteps int
+
+const (
+	SpeedSteps14  SpeedSteps = 14
+	SpeedSteps28  SpeedSteps = 28
+	SpeedSteps128 SpeedSteps = 128
+)
+
+// LocoChange is a change to a loco. Zero and nil fields and functions missing
+// from Functions stay unchanged.
+type LocoChange struct {
+	// SpeedSteps is the new speed step mode. Without Speed, the loco keeps
+	// its speed step, which must exist in the new mode, or its emergency
+	// stop.
+	SpeedSteps SpeedSteps
+	// Speed is the speed step: 0 stops, at most 14, 28 or 126 depending on
+	// the speed step mode. It ends an emergency stop.
+	Speed     *uint8
+	Forward   *bool
+	Functions map[uint8]bool // F0–F31, on or off
+}
+
+// Loco is the state of a loco, as reported in LAN_X_LOCO_INFO.
+type Loco struct {
+	Address       uint16
+	SpeedSteps    SpeedSteps
+	Speed         uint8 // speed step, 0 when stopped or in an emergency stop
+	EmergencyStop bool
+	Forward       bool
+	Functions     uint32 // functions that are on, F0 in bit 0
+}
+
+// Function reports whether function fn (F0–F31) is on.
+func (l Loco) Function(fn uint8) bool {
+	return fn < 32 && l.Functions&(1<<fn) != 0
+}
+
+// SetLoco changes the loco with addr (1–9999), as a throttle outside the
+// Z21 LAN would. It returns the loco after the change, whether it changed
+// and how many clients subscribed to the loco got LAN_X_LOCO_INFO.
+func (c *Client) SetLoco(ctx context.Context, addr uint16, ch LocoChange) (loco Loco, changed bool, recipients int, err error) {
+	req := &simctlv1.SetLocoRequest{
+		Address:   uint32(addr),
+		Speed:     widen[uint8, uint32](ch.Speed),
+		Forward:   ch.Forward,
+		Functions: make(map[uint32]bool, len(ch.Functions)),
+	}
+	if ch.SpeedSteps != 0 {
+		steps, ok := speedStepsToProto[ch.SpeedSteps]
+		if !ok {
+			return Loco{}, false, 0, fmt.Errorf("simclient: set loco: unknown speed steps %d", ch.SpeedSteps)
+		}
+		req.SpeedSteps = &steps
+	}
+	for fn, on := range ch.Functions {
+		req.Functions[uint32(fn)] = on
+	}
+	resp, err := c.svc.SetLoco(ctx, req)
+	if err != nil {
+		return Loco{}, false, 0, fmt.Errorf("simclient: set loco: %w", err)
+	}
+	pl := resp.GetLoco()
+	loco = Loco{
+		Address:       uint16(pl.GetAddress()),
+		Speed:         uint8(pl.GetSpeed()),
+		EmergencyStop: pl.GetEmergencyStop(),
+		Forward:       pl.GetForward(),
+		Functions:     pl.GetFunctions(),
+	}
+	for steps, ps := range speedStepsToProto {
+		if ps == pl.GetSpeedSteps() {
+			loco.SpeedSteps = steps
+		}
+	}
+	return loco, resp.GetChanged(), int(resp.GetRecipientCount()), nil
+}
+
+var speedStepsToProto = map[SpeedSteps]simctlv1.LocoSpeedSteps{
+	SpeedSteps14:  simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_14,
+	SpeedSteps28:  simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_28,
+	SpeedSteps128: simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_128,
 }
 
 // ClientInfo describes the session of a Z21 LAN client.

@@ -240,6 +240,65 @@ func TestSystemSet(t *testing.T) {
 	}
 }
 
+func TestLocoSet(t *testing.T) {
+	udpAddr, addr := startSimulator(t)
+	c := subscribe(t, udpAddr, protocol.BroadcastFlagXpressNet)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if _, err := c.Call(ctx, protocol.GetLocoInfo(3)); err != nil {
+		t.Fatalf("GetLocoInfo: %v", err)
+	}
+
+	out := mustRun(t, "--addr", addr, "loco", "set", "0x3", "--steps", "28", "--speed", "10", "--reverse", "-f", "0=on,4=on", "-f", "4=off", "--function", "31=on")
+	if want := "loco 3: reverse, speed 10/28, F0 F31 on, sent to 1 client\n"; out != want {
+		t.Fatalf("output = %q, want %q", out, want)
+	}
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	info, err := protocol.LocoInfoFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("subscriber got %#v: %v", msgs, err)
+	}
+	if step, _ := info.SpeedStep(); step != 10 || info.Forward || !info.Headlight || info.FunctionsF1F4 != 0 || info.FunctionsF29F31 != 0x04 {
+		t.Fatalf("LAN_X_LOCO_INFO = %+v, want step 10, reverse, F0 and F31 on", info)
+	}
+
+	tests := []struct {
+		args []string
+		want string
+	}{
+		{args: []string{"--reverse"}, want: "loco 3: reverse, speed 10/28, F0 F31 on (unchanged)\n"},
+		{args: []string{"--steps", "128", "--speed", "0", "--forward", "-f", "0=off,31=off"}, want: "loco 3: forward, speed 0/126, functions off, sent to 1 client\n"},
+	}
+	for _, tt := range tests {
+		args := append([]string{"--addr", addr, "loco", "set", "3"}, tt.args...)
+		if got := mustRun(t, args...); got != tt.want {
+			t.Errorf("z21-sim-ctl loco set 3 %s = %q, want %q", strings.Join(tt.args, " "), got, tt.want)
+		}
+	}
+
+	out = mustRun(t, "--addr", addr, "-o", "json", "loco", "set", "3", "--speed", "126", "-f", "1=on")
+	var res struct {
+		Address       uint16 `json:"address"`
+		SpeedSteps    int    `json:"speed_steps"`
+		Speed         uint8  `json:"speed"`
+		EmergencyStop bool   `json:"emergency_stop"`
+		Forward       bool   `json:"forward"`
+		Functions     []int  `json:"functions"`
+		Changed       bool   `json:"changed"`
+		Recipients    int    `json:"recipients"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("json output %q: %v", out, err)
+	}
+	if res.Address != 3 || res.SpeedSteps != 128 || res.Speed != 126 || res.EmergencyStop || !res.Forward ||
+		len(res.Functions) != 1 || res.Functions[0] != 1 || !res.Changed || res.Recipients != 1 {
+		t.Fatalf("json output = %+v, want loco 3, 128 speed steps, speed 126, forward, F1 on, changed, 1 recipient", res)
+	}
+}
+
 func TestSystemBroadcast(t *testing.T) {
 	udpAddr, addr := startSimulator(t)
 	subscribe(t, udpAddr, protocol.BroadcastFlagSystemState)
@@ -306,6 +365,16 @@ func TestErrors(t *testing.T) {
 		{name: "can add detector NETID too large", args: []string{"can", "add", "detector", "0x10000"}, wantErr: "invalid NETID"},
 		{name: "can add detector too many ports", args: []string{"can", "add", "detector", "1", "--ports", "300"}, wantErr: "port_count 300 out of range"},
 		{name: "can add booster name too long", args: []string{"can", "add", "booster", "1", "--name", "a name that is too long"}, wantErr: "longer than 15 bytes"},
+		{name: "loco set without ADDR", args: []string{"loco", "set", "--speed", "1"}, wantErr: "accepts 1 arg"},
+		{name: "loco set ADDR zero", args: []string{"loco", "set", "0", "--speed", "1"}, wantErr: "invalid ADDR"},
+		{name: "loco set ADDR too large", args: []string{"loco", "set", "10000", "--speed", "1"}, wantErr: "invalid ADDR"},
+		{name: "loco set nothing to change", args: []string{"loco", "set", "3"}, wantErr: "nothing to change"},
+		{name: "loco set forward and reverse", args: []string{"loco", "set", "3", "--forward", "--reverse"}, wantErr: "none of the others can be"},
+		{name: "loco set invalid steps", args: []string{"loco", "set", "3", "--steps", "27"}, wantErr: "invalid --steps 27"},
+		{name: "loco set speed above mode", args: []string{"loco", "set", "3", "--steps", "14", "--speed", "15"}, wantErr: "speed step 15 out of range [0, 14]"},
+		{name: "loco set function out of range", args: []string{"loco", "set", "3", "-f", "32=on"}, wantErr: "invalid --function \"32=on\""},
+		{name: "loco set function without state", args: []string{"loco", "set", "3", "-f", "1"}, wantErr: "invalid --function \"1\""},
+		{name: "loco set function invalid state", args: []string{"loco", "set", "3", "-f", "1=toggle"}, wantErr: "invalid --function"},
 		{name: "unreachable simulator", args: []string{"--addr", "127.0.0.1:1", "--timeout", "200ms", "power", "on"}, wantErr: "set track power"},
 	}
 	for _, tt := range tests {
@@ -335,6 +404,9 @@ func TestCompletion(t *testing.T) {
 		{name: "timeout of subcommand", args: []string{"power", "--timeout", ""}},
 		{name: "numeric flag", args: []string{"system", "set", "--main-current", ""}},
 		{name: "name flag", args: []string{"can", "add", "booster", "1", "--name", ""}},
+		{name: "loco ADDR", args: []string{"loco", "set", ""}},
+		{name: "speed steps", args: []string{"loco", "set", "3", "--steps", ""}, want: []string{"14", "28", "128"}},
+		{name: "function flag", args: []string{"loco", "set", "3", "-f", ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

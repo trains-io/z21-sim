@@ -1,6 +1,7 @@
 package sim_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/trains-io/z21-sim/internal/sim"
@@ -155,6 +156,120 @@ func TestStatePurgeLoco(t *testing.T) {
 		t.Fatalf("Loco(3) after purge = %+v, want the default %+v", got, want)
 	}
 }
+
+func TestStateSetLoco(t *testing.T) {
+	steps28 := protocol.LocoSpeedSteps28
+	tests := []struct {
+		name   string
+		before func(*sim.State)
+		change sim.LocoChange
+		want   protocol.LocoInfo
+	}{
+		{
+			name:   "nothing",
+			change: sim.LocoChange{},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x04, Forward: true},
+		},
+		{
+			name:   "speed in the loco's mode",
+			change: sim.LocoChange{Speed: ptr[uint8](126)},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x04, Forward: true, Speed: 0x7F},
+		},
+		{
+			name:   "speed steps and speed",
+			change: sim.LocoChange{SpeedSteps: &steps28, Speed: ptr[uint8](2)},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x02, Forward: true, Speed: 0x12},
+		},
+		{
+			name:   "speed steps keep the speed step",
+			before: func(st *sim.State) { st.SetLoco(3, sim.LocoChange{Speed: ptr[uint8](2)}) },
+			change: sim.LocoChange{SpeedSteps: &steps28},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x02, Forward: true, Speed: 0x12},
+		},
+		{
+			name:   "speed steps keep an emergency stop",
+			before: func(st *sim.State) { st.EStopLoco(3) },
+			change: sim.LocoChange{SpeedSteps: &steps28},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x02, Forward: true, Speed: 0x01},
+		},
+		{
+			name:   "speed ends an emergency stop",
+			before: func(st *sim.State) { st.EStopLoco(3) },
+			change: sim.LocoChange{Speed: ptr[uint8](0)},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x04, Forward: true},
+		},
+		{
+			name:   "reverse",
+			change: sim.LocoChange{Forward: ptr(false)},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x04},
+		},
+		{
+			name:   "functions on and off, others kept",
+			before: func(st *sim.State) { st.SetLocoFunction(3, 1, protocol.LocoFunctionOn) },
+			change: sim.LocoChange{Functions: map[uint8]bool{0: true, 31: true, 1: false, 2: false}},
+			want:   protocol.LocoInfo{Address: 3, SpeedSteps: 0x04, Forward: true, Headlight: true, FunctionsF29F31: 0x04},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st := sim.NewState()
+			if tt.before != nil {
+				tt.before(st)
+			}
+			before := st.Loco(3)
+
+			got, changed, err := st.SetLoco(3, tt.change)
+			if err != nil {
+				t.Fatalf("SetLoco: %v", err)
+			}
+			if got != tt.want || changed != (tt.want != before) {
+				t.Fatalf("SetLoco = %+v, %v; want %+v, changed %v", got, changed, tt.want, tt.want != before)
+			}
+			if got := st.Loco(3); got != tt.want {
+				t.Fatalf("Loco(3) = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStateSetLocoInvalid(t *testing.T) {
+	unknownSteps := byte(0x01)
+	steps14 := protocol.LocoSpeedSteps14
+	tests := []struct {
+		name   string
+		addr   uint16
+		change sim.LocoChange
+	}{
+		{name: "address 0", addr: 0},
+		{name: "address 10000", addr: 10000},
+		{name: "unknown speed steps", addr: 3, change: sim.LocoChange{SpeedSteps: &unknownSteps}},
+		{name: "speed above 126", addr: 3, change: sim.LocoChange{Speed: ptr[uint8](127)}},
+		{name: "speed above 14", addr: 3, change: sim.LocoChange{SpeedSteps: &steps14, Speed: ptr[uint8](15)}},
+		{name: "F32", addr: 3, change: sim.LocoChange{Functions: map[uint8]bool{32: true}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st := sim.NewState()
+			if _, _, err := st.SetLoco(tt.addr, tt.change); !errors.Is(err, sim.ErrInvalidLoco) {
+				t.Fatalf("SetLoco error = %v, want ErrInvalidLoco", err)
+			}
+		})
+	}
+
+	t.Run("speed step out of range in the new mode", func(t *testing.T) {
+		st := sim.NewState()
+		st.SetLoco(3, sim.LocoChange{Speed: ptr[uint8](20), Forward: ptr(false)})
+		before := st.Loco(3)
+		if _, _, err := st.SetLoco(3, sim.LocoChange{SpeedSteps: &steps14, Forward: ptr(true)}); !errors.Is(err, sim.ErrInvalidLoco) {
+			t.Fatalf("SetLoco error = %v, want ErrInvalidLoco (step 20 > 14)", err)
+		}
+		if got := st.Loco(3); got != before {
+			t.Fatalf("Loco(3) = %+v, want it unchanged %+v", got, before)
+		}
+	})
+}
+
+func ptr[T any](v T) *T { return &v }
 
 // withFunctions returns base with the functions of f.
 func withFunctions(base, f protocol.LocoInfo) protocol.LocoInfo {

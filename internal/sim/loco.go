@@ -115,6 +115,18 @@ func (s *Server) purgeLocoHandler() server.Handler {
 	})
 }
 
+// SetLoco applies c to addr, as a throttle outside the Z21 LAN would, and, if
+// the loco changed, sends LAN_X_LOCO_INFO to its subscribers. It returns the
+// new state, whether it changed and how many clients were notified, or an
+// error wrapping ErrInvalidLoco. Used by the control API.
+func (s *Server) SetLoco(addr uint16, c LocoChange) (info protocol.LocoInfo, changed bool, recipients int, err error) {
+	info, changed, err = s.state.SetLoco(addr, c)
+	if err != nil || !changed {
+		return info, changed, 0, err
+	}
+	return info, true, s.z21.BroadcastLocoInfo(info), nil
+}
+
 // locoBinaryStateHandler accepts LAN_X_SET_LOCO_BINARY_STATE (spec §4.3.3)
 // without effect, as ZIMO's simulator: LAN_X_LOCO_INFO does not report
 // binary states.

@@ -11,6 +11,7 @@ import (
 	simctlv1 "github.com/trains-io/z21-sim/api/simctl/v1"
 	"github.com/trains-io/z21-sim/internal/sim"
 	"github.com/trains-io/z21-sim/internal/trace"
+	"github.com/trains-io/z21.go/protocol"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -197,6 +198,85 @@ func (g *Server) ShortCircuit(_ context.Context, req *simctlv1.ShortCircuitReque
 		return nil, status.Errorf(codes.InvalidArgument, "unknown short circuit kind %d", req.GetKind())
 	}
 	return &simctlv1.ShortCircuitResponse{Changed: g.sim.ShortCircuit(kind)}, nil
+}
+
+func (g *Server) SetLoco(_ context.Context, req *simctlv1.SetLocoRequest) (*simctlv1.SetLocoResponse, error) {
+	c, err := locoChangeFromProto(req)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if req.GetAddress() > math.MaxUint16 {
+		return nil, status.Errorf(codes.InvalidArgument, "address %d out of range [1, %d]", req.GetAddress(), sim.MaxLocoAddress)
+	}
+	info, changed, count, err := g.sim.SetLoco(uint16(req.GetAddress()), c)
+	if errors.Is(err, sim.ErrInvalidLoco) {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &simctlv1.SetLocoResponse{
+		Loco:           locoToProto(info),
+		Changed:        changed,
+		RecipientCount: int32(count),
+	}, nil
+}
+
+func locoChangeFromProto(req *simctlv1.SetLocoRequest) (sim.LocoChange, error) {
+	var c sim.LocoChange
+	if req.SpeedSteps != nil {
+		var steps byte
+		switch req.GetSpeedSteps() {
+		case simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_14:
+			steps = protocol.LocoSpeedSteps14
+		case simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_28:
+			steps = protocol.LocoSpeedSteps28
+		case simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_128:
+			steps = protocol.LocoSpeedSteps128
+		default:
+			return c, fmt.Errorf("unknown speed steps %d", req.GetSpeedSteps())
+		}
+		c.SpeedSteps = &steps
+	}
+	if req.Speed != nil {
+		if req.GetSpeed() > math.MaxUint8 {
+			return c, fmt.Errorf("speed %d out of range", req.GetSpeed())
+		}
+		speed := uint8(req.GetSpeed())
+		c.Speed = &speed
+	}
+	c.Forward = req.Forward
+	if len(req.GetFunctions()) > 0 {
+		c.Functions = make(map[uint8]bool, len(req.GetFunctions()))
+		for fn, on := range req.GetFunctions() {
+			if fn > math.MaxUint8 {
+				return c, fmt.Errorf("function F%d out of range [F0, F31]", fn)
+			}
+			c.Functions[uint8(fn)] = on
+		}
+	}
+	return c, nil
+}
+
+func locoToProto(info protocol.LocoInfo) *simctlv1.Loco {
+	var steps simctlv1.LocoSpeedSteps
+	switch info.SpeedSteps {
+	case protocol.LocoInfoSpeedSteps14:
+		steps = simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_14
+	case protocol.LocoInfoSpeedSteps28:
+		steps = simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_28
+	case protocol.LocoInfoSpeedSteps128:
+		steps = simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_128
+	}
+	speed, eStop := info.SpeedStep()
+	return &simctlv1.Loco{
+		Address:       uint32(info.Address),
+		SpeedSteps:    steps,
+		Speed:         uint32(speed),
+		EmergencyStop: eStop,
+		Forward:       info.Forward,
+		Functions:     sim.LocoFunctions(info),
+	}
 }
 
 func int16Field(errs []error, name string, v *int32) (*int16, []error) {

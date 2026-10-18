@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 func startSimulator(t *testing.T) (*sim.Server, string) {
@@ -600,6 +601,95 @@ func TestGRPCSetSystemStateOutOfRange(t *testing.T) {
 	resp, err := control.SetSystemState(ctx, &simctlv1.SetSystemStateRequest{MainCurrentMa: &ok})
 	if err != nil || !resp.GetChanged() {
 		t.Fatalf("SetSystemState(main current 250) = %v, %v; want changed (rejected requests must not apply)", resp, err)
+	}
+}
+
+func TestGRPCSetLoco(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	c, err := client.Dial(udpAddr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer c.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetLocoInfo(3)); err != nil {
+		t.Fatalf("GetLocoInfo: %v", err)
+	}
+
+	steps, speed, forward := simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_28, uint32(2), false
+	req := &simctlv1.SetLocoRequest{
+		Address:    3,
+		SpeedSteps: &steps,
+		Speed:      &speed,
+		Forward:    &forward,
+		Functions:  map[uint32]bool{0: true, 31: true},
+	}
+	resp, err := control.SetLoco(ctx, req)
+	if err != nil {
+		t.Fatalf("SetLoco: %v", err)
+	}
+	wantLoco := &simctlv1.Loco{Address: 3, SpeedSteps: steps, Speed: 2, Functions: 1 | 1<<31}
+	if !proto.Equal(resp.GetLoco(), wantLoco) || !resp.GetChanged() || resp.GetRecipientCount() != 1 {
+		t.Fatalf("SetLoco = %v, want loco %v, changed, 1 recipient", resp, wantLoco)
+	}
+
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	info, err := protocol.LocoInfoFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("subscriber got %#v: %v", msgs, err)
+	}
+	want := protocol.LocoInfo{Address: 3, SpeedSteps: protocol.LocoInfoSpeedSteps28, Speed: 0x12, Headlight: true, FunctionsF29F31: 0x04}
+	if info != want {
+		t.Fatalf("LAN_X_LOCO_INFO = %+v, want %+v", info, want)
+	}
+
+	resp, err = control.SetLoco(ctx, req)
+	if err != nil {
+		t.Fatalf("SetLoco again: %v", err)
+	}
+	if resp.GetChanged() || resp.GetRecipientCount() != 0 || !proto.Equal(resp.GetLoco(), wantLoco) {
+		t.Fatalf("SetLoco again = %v, want loco %v, unchanged, no recipients", resp, wantLoco)
+	}
+}
+
+func TestGRPCSetLocoInvalid(t *testing.T) {
+	simulator, _ := startSimulator(t)
+	control := startControl(t, simulator)
+
+	tooFast, beyondUint8 := uint32(127), uint32(300)
+	unknownSteps := simctlv1.LocoSpeedSteps(99)
+	tests := []struct {
+		name string
+		req  *simctlv1.SetLocoRequest
+	}{
+		{name: "address 0", req: &simctlv1.SetLocoRequest{}},
+		{name: "address 10000", req: &simctlv1.SetLocoRequest{Address: 10000}},
+		{name: "address beyond uint16", req: &simctlv1.SetLocoRequest{Address: 65539}},
+		{name: "unknown speed steps", req: &simctlv1.SetLocoRequest{Address: 3, SpeedSteps: &unknownSteps}},
+		{name: "speed above 126", req: &simctlv1.SetLocoRequest{Address: 3, Speed: &tooFast}},
+		{name: "speed beyond uint8", req: &simctlv1.SetLocoRequest{Address: 3, Speed: &beyondUint8}},
+		{name: "F32", req: &simctlv1.SetLocoRequest{Address: 3, Functions: map[uint32]bool{32: true}}},
+		{name: "F300", req: &simctlv1.SetLocoRequest{Address: 3, Functions: map[uint32]bool{300: true}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if _, err := control.SetLoco(ctx, tt.req); status.Code(err) != codes.InvalidArgument {
+				t.Fatalf("SetLoco error = %v, want InvalidArgument", err)
+			}
+		})
 	}
 }
 

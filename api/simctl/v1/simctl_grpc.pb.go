@@ -27,6 +27,7 @@ const (
 	SimulatorService_SetSystemState_FullMethodName          = "/trains.io.z21.simctl.v1.SimulatorService/SetSystemState"
 	SimulatorService_EmergencyStop_FullMethodName           = "/trains.io.z21.simctl.v1.SimulatorService/EmergencyStop"
 	SimulatorService_ShortCircuit_FullMethodName            = "/trains.io.z21.simctl.v1.SimulatorService/ShortCircuit"
+	SimulatorService_SetLoco_FullMethodName                 = "/trains.io.z21.simctl.v1.SimulatorService/SetLoco"
 )
 
 // SimulatorServiceClient is the client API for SimulatorService service.
@@ -69,6 +70,10 @@ type SimulatorServiceClient interface {
 	// subscribers the new system state, whose CentralStateEx tells internal and
 	// external shorts apart. SetTrackPower with on = true ends it.
 	ShortCircuit(ctx context.Context, in *ShortCircuitRequest, opts ...grpc.CallOption) (*ShortCircuitResponse, error)
+	// SetLoco changes a loco as a throttle outside the Z21 LAN would. Only the
+	// fields that are set change. If the loco changed, the clients subscribed
+	// to it get LAN_X_LOCO_INFO.
+	SetLoco(ctx context.Context, in *SetLocoRequest, opts ...grpc.CallOption) (*SetLocoResponse, error)
 }
 
 type simulatorServiceClient struct {
@@ -159,6 +164,16 @@ func (c *simulatorServiceClient) ShortCircuit(ctx context.Context, in *ShortCirc
 	return out, nil
 }
 
+func (c *simulatorServiceClient) SetLoco(ctx context.Context, in *SetLocoRequest, opts ...grpc.CallOption) (*SetLocoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetLocoResponse)
+	err := c.cc.Invoke(ctx, SimulatorService_SetLoco_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SimulatorServiceServer is the server API for SimulatorService service.
 // All implementations must embed UnimplementedSimulatorServiceServer
 // for forward compatibility.
@@ -199,6 +214,10 @@ type SimulatorServiceServer interface {
 	// subscribers the new system state, whose CentralStateEx tells internal and
 	// external shorts apart. SetTrackPower with on = true ends it.
 	ShortCircuit(context.Context, *ShortCircuitRequest) (*ShortCircuitResponse, error)
+	// SetLoco changes a loco as a throttle outside the Z21 LAN would. Only the
+	// fields that are set change. If the loco changed, the clients subscribed
+	// to it get LAN_X_LOCO_INFO.
+	SetLoco(context.Context, *SetLocoRequest) (*SetLocoResponse, error)
 	mustEmbedUnimplementedSimulatorServiceServer()
 }
 
@@ -232,6 +251,9 @@ func (UnimplementedSimulatorServiceServer) EmergencyStop(context.Context, *Emerg
 }
 func (UnimplementedSimulatorServiceServer) ShortCircuit(context.Context, *ShortCircuitRequest) (*ShortCircuitResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ShortCircuit not implemented")
+}
+func (UnimplementedSimulatorServiceServer) SetLoco(context.Context, *SetLocoRequest) (*SetLocoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetLoco not implemented")
 }
 func (UnimplementedSimulatorServiceServer) mustEmbedUnimplementedSimulatorServiceServer() {}
 func (UnimplementedSimulatorServiceServer) testEmbeddedByValue()                          {}
@@ -398,6 +420,24 @@ func _SimulatorService_ShortCircuit_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SimulatorService_SetLoco_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetLocoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SimulatorServiceServer).SetLoco(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SimulatorService_SetLoco_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SimulatorServiceServer).SetLoco(ctx, req.(*SetLocoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SimulatorService_ServiceDesc is the grpc.ServiceDesc for SimulatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -436,6 +476,10 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ShortCircuit",
 			Handler:    _SimulatorService_ShortCircuit_Handler,
+		},
+		{
+			MethodName: "SetLoco",
+			Handler:    _SimulatorService_SetLoco_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -346,6 +346,74 @@ func TestAddCANDeviceInvalid(t *testing.T) {
 	}
 }
 
+func TestSetLoco(t *testing.T) {
+	f := newFixture(t)
+	ctx := testContext(t)
+
+	lan := f.lanClient(t, protocol.BroadcastFlagXpressNet)
+	if _, err := lan.Call(ctx, protocol.GetLocoInfo(5)); err != nil {
+		t.Fatalf("GetLocoInfo: %v", err)
+	}
+
+	speed, forward := uint8(10), false
+	loco, changed, recipients, err := f.sim.SetLoco(ctx, 5, simclient.LocoChange{
+		SpeedSteps: simclient.SpeedSteps28,
+		Speed:      &speed,
+		Forward:    &forward,
+		Functions:  map[uint8]bool{0: true, 5: true},
+	})
+	if err != nil {
+		t.Fatalf("SetLoco: %v", err)
+	}
+	want := simclient.Loco{Address: 5, SpeedSteps: simclient.SpeedSteps28, Speed: 10, Functions: 1 | 1<<5}
+	if loco != want || !changed || recipients != 1 {
+		t.Fatalf("SetLoco = %+v, %v, %d; want %+v, changed, 1 recipient", loco, changed, recipients, want)
+	}
+	if !loco.Function(0) || !loco.Function(5) || loco.Function(1) || loco.Function(40) {
+		t.Fatalf("Function: F0 %v, F5 %v, F1 %v, F40 %v; want on, on, off, off",
+			loco.Function(0), loco.Function(5), loco.Function(1), loco.Function(40))
+	}
+
+	msgs, err := lan.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	info, err := protocol.LocoInfoFromMessages(msgs)
+	if err != nil {
+		t.Fatalf("subscriber got %#v: %v", msgs, err)
+	}
+	if step, eStop := info.SpeedStep(); info.SpeedSteps != protocol.LocoInfoSpeedSteps28 || step != 10 || eStop || info.Forward {
+		t.Fatalf("LAN_X_LOCO_INFO = %+v, want 28 speed steps, step 10, reverse", info)
+	}
+
+	loco, changed, _, err = f.sim.SetLoco(ctx, 5, simclient.LocoChange{SpeedSteps: simclient.SpeedSteps128})
+	if err != nil {
+		t.Fatalf("SetLoco(128 speed steps): %v", err)
+	}
+	want.SpeedSteps = simclient.SpeedSteps128
+	if loco != want || !changed {
+		t.Fatalf("SetLoco(128 speed steps) = %+v, %v; want %+v (speed step kept), changed", loco, changed, want)
+	}
+}
+
+func TestSetLocoInvalid(t *testing.T) {
+	f := newFixture(t)
+	ctx := testContext(t)
+
+	_, _, _, err := f.sim.SetLoco(ctx, 3, simclient.LocoChange{SpeedSteps: 42})
+	if err == nil || !strings.Contains(err.Error(), "unknown speed steps 42") {
+		t.Fatalf("SetLoco(42 speed steps) error = %v, want unknown speed steps", err)
+	}
+
+	_, _, _, err = f.sim.SetLoco(ctx, 3, simclient.LocoChange{Functions: map[uint8]bool{32: true}})
+	if err == nil || !strings.HasPrefix(err.Error(), "simclient: set loco: ") {
+		t.Fatalf("SetLoco(F32) error = %v, want it prefixed with the operation", err)
+	}
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("SetLoco(F32) status code = %v, want InvalidArgument", status.Code(err))
+	}
+}
+
 func canDeviceName(t *testing.T, f fixture, netID uint16) string {
 	t.Helper()
 	c := f.lanClient(t, 0)

@@ -49,6 +49,54 @@ service SimulatorService {
   // subscribers the new system state, whose CentralStateEx tells internal and
   // external shorts apart. SetTrackPower with on = true ends it.
   rpc ShortCircuit(ShortCircuitRequest) returns (ShortCircuitResponse);
+
+  // SetLoco changes a loco as a throttle outside the Z21 LAN would. Only the
+  // fields that are set change. If the loco changed, the clients subscribed
+  // to it get LAN_X_LOCO_INFO.
+  rpc SetLoco(SetLocoRequest) returns (SetLocoResponse);
+}
+
+// LocoSpeedSteps is the speed step mode of a loco.
+enum LocoSpeedSteps {
+  LOCO_SPEED_STEPS_UNSPECIFIED = 0;
+  LOCO_SPEED_STEPS_14 = 1;
+  LOCO_SPEED_STEPS_28 = 2;
+  LOCO_SPEED_STEPS_128 = 3;
+}
+
+message SetLocoRequest {
+  // Loco address, 1–9999.
+  uint32 address = 1;
+  // New speed step mode. Without speed, the loco keeps its speed step,
+  // which must exist in the new mode, or its emergency stop.
+  optional LocoSpeedSteps speed_steps = 2;
+  // Speed step: 0 stops, at most 14, 28 or 126 depending on the speed step
+  // mode. Ends an emergency stop.
+  optional uint32 speed = 3;
+  // Direction.
+  optional bool forward = 4;
+  // Functions to switch, by number (F0–F31): true is on, false off.
+  map<uint32, bool> functions = 5;
+}
+
+message SetLocoResponse {
+  // The loco after the change.
+  Loco loco = 1;
+  // Whether the loco changed.
+  bool changed = 2;
+  int32 recipient_count = 3;
+}
+
+// Loco is the state of a loco, as reported in LAN_X_LOCO_INFO.
+message Loco {
+  uint32 address = 1;
+  LocoSpeedSteps speed_steps = 2;
+  // Speed step, 0 when stopped or in an emergency stop.
+  uint32 speed = 3;
+  bool emergency_stop = 4;
+  bool forward = 5;
+  // Functions that are on, F0 in bit 0 up to F31 in bit 31.
+  uint32 functions = 6;
 }
 
 // ShortCircuitKind tells where a short circuit happened.

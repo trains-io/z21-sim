@@ -148,6 +148,18 @@ Plug in a CAN occupancy detector (all ports free) or a booster, emulating hot-pl
 
 Subscribe to `CAN_DETECTOR_UPDATES` or `CAN_BOOSTER_UPDATES` respectively.
 
+### Locos
+
+Drive a loco as a throttle outside the Z21 LAN would; values not given stay unchanged. `--speed` is a speed step (0 stops, at most 14, 28 or 126); a loco nobody has driven has 128 speed steps. Addresses accept decimal or `0x` hex.
+
+```bash
+./bin/z21-sim-ctl loco set 3 --speed 40 --forward
+./bin/z21-sim-ctl loco set 3 -f 0=on -f 1=off       # functions F0–F31
+./bin/z21-sim-ctl loco set 1234 --steps 28 --speed 10 --reverse
+```
+
+`LAN_X_LOCO_INFO` goes to clients that asked for the loco with `LAN_X_GET_LOCO_INFO` and subscribe to `XPRESSNET_UPDATES`, and to clients subscribed to `ALL_LOCO_INFO_UPDATES`.
+
 ### Clients
 
 List the LAN clients with an active session, their broadcast flags and subscribed locos:
