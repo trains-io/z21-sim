@@ -31,6 +31,7 @@ type State struct {
 	// them through reportedLocked.
 	system     protocol.SystemState
 	canDevices map[uint16]CANDevice
+	locos      map[uint16]protocol.LocoInfo // locos driven so far, by address
 }
 
 // NewState returns the state of a command station that has just been powered
@@ -51,6 +52,7 @@ func newState(capabilities byte) *State {
 			Capabilities:        capabilities,
 		},
 		canDevices: make(map[uint16]CANDevice),
+		locos:      make(map[uint16]protocol.LocoInfo),
 	}
 }
 
