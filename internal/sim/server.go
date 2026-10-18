@@ -113,9 +113,16 @@ func (s *Server) mux() *server.Mux {
 	m.HandleLANXDB0(xCommandGetFirmware, xFirmwareDB0, reply(s.xFirmwareReply))
 
 	m.HandleLANXDB0(xHeaderGetLocoInfo, xCommandGetLocoInfo, s.locoInfoHandler())
+	m.HandleLANXDB0(xHeaderGetLocoInfo, xCommandPurgeLoco, s.purgeLocoHandler())
 	for _, steps := range []byte{protocol.LocoSpeedSteps14, protocol.LocoSpeedSteps28, protocol.LocoSpeedSteps128} {
 		m.HandleLANXDB0(xHeaderSetLocoDrive, 0x10|steps, s.locoDriveHandler())
 	}
+	m.HandleLANXDB0(xHeaderSetLocoDrive, xCommandSetLocoFunction, s.locoFunctionHandler())
+	for _, group := range locoFunctionGroups {
+		m.HandleLANXDB0(xHeaderSetLocoDrive, byte(group), s.locoFunctionGroupHandler())
+	}
+	m.HandleLANXDB0(xHeaderSetLocoBinary, xCommandSetLocoBinary, locoBinaryStateHandler())
+	m.HandleLANX(xHeaderSetLocoEStop, s.locoEStopHandler())
 
 	for _, header := range []uint16{
 		protocol.HeaderLANCANDeviceGetDescription,

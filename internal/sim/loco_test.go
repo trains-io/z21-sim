@@ -119,3 +119,73 @@ func TestDriveLocoMalformed(t *testing.T) {
 		t.Fatalf("reply = %+v, want LAN_X_UNKNOWN_COMMAND", msgs)
 	}
 }
+
+func TestLocoFunctionsAndEStopNotifySubscribers(t *testing.T) {
+	_, addr := startTestServer(t)
+	observer := dialXBus(t, addr)
+	driver := dialXBus(t, addr)
+	getLocoInfo(t, observer, 3)
+
+	if err := driver.Send(t.Context(), protocol.SetLocoDrive(3, protocol.LocoSpeedSteps128, true, 50)); err != nil {
+		t.Fatalf("SetLocoDrive: %v", err)
+	}
+	readLocoInfo(t, observer, 3)
+
+	steps := []struct {
+		name string
+		req  protocol.Message
+		want func(*protocol.LocoInfo)
+	}{
+		{name: "function F0 on", req: protocol.SetLocoFunction(3, 0, protocol.LocoFunctionOn), want: func(i *protocol.LocoInfo) { i.Headlight = true }},
+		{name: "group F5-F8", req: protocol.SetLocoFunctionGroup(3, protocol.LocoFunctionGroupF5F8, 0x03), want: func(i *protocol.LocoInfo) { i.FunctionsF5F12 = 0x03 }},
+		{name: "loco e-stop", req: protocol.SetLocoEStop(3), want: func(i *protocol.LocoInfo) { i.Speed = 0x01 }},
+	}
+	want := protocol.LocoInfo{Address: 3, SpeedSteps: 0x04, Forward: true, Speed: 50}
+	for _, step := range steps {
+		if err := driver.Send(t.Context(), step.req); err != nil {
+			t.Fatalf("%s: %v", step.name, err)
+		}
+		step.want(&want)
+		if got := readLocoInfo(t, observer, 3); got != want {
+			t.Fatalf("%s: observer got %+v, want %+v", step.name, got, want)
+		}
+	}
+}
+
+func TestPurgeLoco(t *testing.T) {
+	_, addr := startTestServer(t)
+	c := dialXBus(t, addr)
+	if err := c.Send(t.Context(), protocol.SetLocoDrive(3, protocol.LocoSpeedSteps28, false, 20)); err != nil {
+		t.Fatalf("SetLocoDrive: %v", err)
+	}
+
+	if err := c.Send(t.Context(), protocol.PurgeLoco(3)); err != nil {
+		t.Fatalf("PurgeLoco: %v", err)
+	}
+	want := protocol.LocoInfo{Address: 3, SpeedSteps: 0x04, Forward: true}
+	if got := getLocoInfo(t, c, 3); got != want {
+		t.Fatalf("LocoInfo after purge = %+v, want the default %+v", got, want)
+	}
+}
+
+func TestLocoBinaryStateAccepted(t *testing.T) {
+	_, addr := startTestServer(t)
+	c := dialXBus(t, addr)
+
+	// Answered together with the status: an unknown-command reply would show.
+	if err := c.SendMany(t.Context(), protocol.SetLocoBinaryState(3, 200, true), protocol.GetXStatus()); err != nil {
+		t.Fatalf("SendMany: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("replies = %+v, want only the status", msgs)
+	}
+	if _, err := protocol.ParseXStatus(msgs[0].Data); err != nil {
+		t.Fatalf("reply = %+v, want LAN_X_STATUS_CHANGED: %v", msgs[0], err)
+	}
+}
