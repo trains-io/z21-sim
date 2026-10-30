@@ -693,6 +693,133 @@ func TestGRPCSetLocoInvalid(t *testing.T) {
 	}
 }
 
+// dialXBus dials udpAddr as a client subscribed to X-Bus broadcasts.
+func dialXBus(ctx context.Context, t *testing.T, udpAddr string) *client.Client {
+	t.Helper()
+	c, err := client.Dial(udpAddr)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	t.Cleanup(func() { c.Close() })
+	if err := c.Send(ctx, protocol.SetBroadcastFlags(protocol.BroadcastFlagXpressNet)); err != nil {
+		t.Fatalf("SetBroadcastFlags: %v", err)
+	}
+	if _, err := c.Call(ctx, protocol.GetBroadcastFlags()); err != nil {
+		t.Fatalf("GetBroadcastFlags: %v", err)
+	}
+	return c
+}
+
+func TestGRPCSetTurnout(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c := dialXBus(ctx, t, udpAddr)
+
+	req := &simctlv1.SetTurnoutRequest{Address: 7, Position: simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_2}
+	wantTurnout := &simctlv1.Turnout{Address: 7, Position: simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_2}
+	want := protocol.TurnoutInfo{Address: 7, Position: protocol.TurnoutPositionOutput2}
+	// The same position again is confirmed too.
+	for range 2 {
+		resp, err := control.SetTurnout(ctx, req)
+		if err != nil {
+			t.Fatalf("SetTurnout: %v", err)
+		}
+		if !proto.Equal(resp.GetTurnout(), wantTurnout) || resp.GetRecipientCount() != 1 {
+			t.Fatalf("SetTurnout = %v, want turnout %v, 1 recipient", resp, wantTurnout)
+		}
+
+		msgs, err := c.ReadPacket(ctx)
+		if err != nil {
+			t.Fatalf("ReadPacket: %v", err)
+		}
+		if info, err := protocol.TurnoutInfoFromMessages(msgs); err != nil || info != want {
+			t.Fatalf("LAN_X_TURNOUT_INFO = %+v, err=%v; want %+v", info, err, want)
+		}
+	}
+}
+
+func TestGRPCSetTurnoutInvalid(t *testing.T) {
+	simulator, _ := startSimulator(t)
+	control := startControl(t, simulator)
+
+	output1 := simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_1
+	tests := []struct {
+		name string
+		req  *simctlv1.SetTurnoutRequest
+	}{
+		{name: "position unspecified", req: &simctlv1.SetTurnoutRequest{Address: 7}},
+		{name: "unknown position", req: &simctlv1.SetTurnoutRequest{Address: 7, Position: simctlv1.TurnoutPosition(99)}},
+		{name: "address 2048", req: &simctlv1.SetTurnoutRequest{Address: 2048, Position: output1}},
+		{name: "address beyond uint16", req: &simctlv1.SetTurnoutRequest{Address: 65543, Position: output1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if _, err := control.SetTurnout(ctx, tt.req); status.Code(err) != codes.InvalidArgument {
+				t.Fatalf("SetTurnout error = %v, want InvalidArgument", err)
+			}
+		})
+	}
+}
+
+func TestGRPCSetExtAccessory(t *testing.T) {
+	simulator, udpAddr := startSimulator(t)
+	control := startControl(t, simulator)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c := dialXBus(ctx, t, udpAddr)
+
+	req := &simctlv1.SetExtAccessoryRequest{Address: 7, Value: 0x12}
+	wantAccessory := &simctlv1.ExtAccessory{Address: 7, Value: 0x12}
+	want := protocol.ExtAccessoryInfo{Address: 7, Value: 0x12, Status: protocol.ExtAccessoryStatusValid}
+	// The same value again is confirmed too.
+	for range 2 {
+		resp, err := control.SetExtAccessory(ctx, req)
+		if err != nil {
+			t.Fatalf("SetExtAccessory: %v", err)
+		}
+		if !proto.Equal(resp.GetAccessory(), wantAccessory) || resp.GetRecipientCount() != 1 {
+			t.Fatalf("SetExtAccessory = %v, want accessory %v, 1 recipient", resp, wantAccessory)
+		}
+
+		msgs, err := c.ReadPacket(ctx)
+		if err != nil {
+			t.Fatalf("ReadPacket: %v", err)
+		}
+		if info, err := protocol.ExtAccessoryInfoFromMessages(msgs); err != nil || info != want {
+			t.Fatalf("LAN_X_EXT_ACCESSORY_INFO = %+v, err=%v; want %+v", info, err, want)
+		}
+	}
+}
+
+func TestGRPCSetExtAccessoryInvalid(t *testing.T) {
+	simulator, _ := startSimulator(t)
+	control := startControl(t, simulator)
+
+	tests := []struct {
+		name string
+		req  *simctlv1.SetExtAccessoryRequest
+	}{
+		{name: "address 2048", req: &simctlv1.SetExtAccessoryRequest{Address: 2048}},
+		{name: "address beyond uint16", req: &simctlv1.SetExtAccessoryRequest{Address: 65543}},
+		{name: "value 256", req: &simctlv1.SetExtAccessoryRequest{Address: 7, Value: 256}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if _, err := control.SetExtAccessory(ctx, tt.req); status.Code(err) != codes.InvalidArgument {
+				t.Fatalf("SetExtAccessory error = %v, want InvalidArgument", err)
+			}
+		})
+	}
+}
+
 func containsSystemStateBroadcast(msgs []protocol.Message) bool {
 	for _, msg := range msgs {
 		if protocol.IsSystemStateDataChanged(msg) {

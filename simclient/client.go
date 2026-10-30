@@ -271,6 +271,71 @@ var speedStepsToProto = map[SpeedSteps]simctlv1.LocoSpeedSteps{
 	SpeedSteps128: simctlv1.LocoSpeedSteps_LOCO_SPEED_STEPS_128,
 }
 
+// TurnoutPosition is the output a turnout was last switched to.
+type TurnoutPosition int
+
+const (
+	TurnoutNotSwitched TurnoutPosition = iota // not switched since the simulator started
+	TurnoutOutput1
+	TurnoutOutput2
+)
+
+// Turnout is the state of a turnout, as reported in LAN_X_TURNOUT_INFO.
+type Turnout struct {
+	Address  uint16 // FAdr as on the wire: 0 is the first turnout
+	Position TurnoutPosition
+}
+
+// SetTurnout switches the turnout with addr (0–2047, as on the wire) to pos
+// (TurnoutOutput1 or TurnoutOutput2), as a throttle outside the Z21 LAN
+// would. It returns the turnout after the change and how many X-Bus
+// subscribers got LAN_X_TURNOUT_INFO; they get it also when the position
+// stays the same.
+func (c *Client) SetTurnout(ctx context.Context, addr uint16, pos TurnoutPosition) (Turnout, int, error) {
+	ppos, ok := turnoutPositionToProto[pos]
+	if !ok {
+		return Turnout{}, 0, fmt.Errorf("simclient: set turnout: unknown position %d", pos)
+	}
+	resp, err := c.svc.SetTurnout(ctx, &simctlv1.SetTurnoutRequest{Address: uint32(addr), Position: ppos})
+	if err != nil {
+		return Turnout{}, 0, fmt.Errorf("simclient: set turnout: %w", err)
+	}
+	pt := resp.GetTurnout()
+	turnout := Turnout{Address: uint16(pt.GetAddress())}
+	for p, pp := range turnoutPositionToProto {
+		if pp == pt.GetPosition() {
+			turnout.Position = p
+		}
+	}
+	return turnout, int(resp.GetRecipientCount()), nil
+}
+
+var turnoutPositionToProto = map[TurnoutPosition]simctlv1.TurnoutPosition{
+	TurnoutNotSwitched: simctlv1.TurnoutPosition_TURNOUT_POSITION_UNSPECIFIED,
+	TurnoutOutput1:     simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_1,
+	TurnoutOutput2:     simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_2,
+}
+
+// ExtAccessory is the state of an extended accessory decoder, as reported in
+// LAN_X_EXT_ACCESSORY_INFO.
+type ExtAccessory struct {
+	Address uint16 // as on the wire
+	Value   byte
+}
+
+// SetExtAccessory sets the extended accessory decoder with addr (0–2047, as
+// on the wire) to value, as a throttle outside the Z21 LAN would. It returns
+// the accessory after the change and how many X-Bus subscribers got
+// LAN_X_EXT_ACCESSORY_INFO; they get it also when the value stays the same.
+func (c *Client) SetExtAccessory(ctx context.Context, addr uint16, value byte) (ExtAccessory, int, error) {
+	resp, err := c.svc.SetExtAccessory(ctx, &simctlv1.SetExtAccessoryRequest{Address: uint32(addr), Value: uint32(value)})
+	if err != nil {
+		return ExtAccessory{}, 0, fmt.Errorf("simclient: set ext accessory: %w", err)
+	}
+	pa := resp.GetAccessory()
+	return ExtAccessory{Address: uint16(pa.GetAddress()), Value: byte(pa.GetValue())}, int(resp.GetRecipientCount()), nil
+}
+
 // ClientInfo describes the session of a Z21 LAN client.
 type ClientInfo struct {
 	Addr           netip.AddrPort // client UDP address

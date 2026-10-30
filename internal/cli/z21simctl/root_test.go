@@ -299,6 +299,82 @@ func TestLocoSet(t *testing.T) {
 	}
 }
 
+func TestTurnoutSet(t *testing.T) {
+	udpAddr, addr := startSimulator(t)
+	c := subscribe(t, udpAddr, protocol.BroadcastFlagXpressNet)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tests := []struct {
+		args []string
+		want protocol.TurnoutInfo
+		out  string
+	}{
+		{args: []string{"0", "2"}, want: protocol.TurnoutInfo{Address: 0, Position: protocol.TurnoutPositionOutput2}, out: "turnout 0: output 2, sent to 1 client\n"},
+		{args: []string{"0x10", "1"}, want: protocol.TurnoutInfo{Address: 16, Position: protocol.TurnoutPositionOutput1}, out: "turnout 16: output 1, sent to 1 client\n"},
+		{args: []string{"2047", "1"}, want: protocol.TurnoutInfo{Address: 2047, Position: protocol.TurnoutPositionOutput1}, out: "turnout 2047: output 1, sent to 1 client\n"},
+	}
+	for _, tt := range tests {
+		args := append([]string{"--addr", addr, "turnout", "set"}, tt.args...)
+		if got := mustRun(t, args...); got != tt.out {
+			t.Fatalf("z21-sim-ctl turnout set %s = %q, want %q", strings.Join(tt.args, " "), got, tt.out)
+		}
+		msgs, err := c.ReadPacket(ctx)
+		if err != nil {
+			t.Fatalf("ReadPacket: %v", err)
+		}
+		if info, err := protocol.TurnoutInfoFromMessages(msgs); err != nil || info != tt.want {
+			t.Fatalf("LAN_X_TURNOUT_INFO = %+v, err=%v; want %+v", info, err, tt.want)
+		}
+	}
+
+	out := mustRun(t, "--addr", addr, "-o", "json", "turnout", "set", "0", "2")
+	var res struct {
+		Address    uint16 `json:"address"`
+		Output     int    `json:"output"`
+		Recipients int    `json:"recipients"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("json output %q: %v", out, err)
+	}
+	if res.Address != 0 || res.Output != 2 || res.Recipients != 1 {
+		t.Fatalf("json output = %+v, want turnout 0, output 2, 1 recipient", res)
+	}
+}
+
+func TestAccessorySet(t *testing.T) {
+	udpAddr, addr := startSimulator(t)
+	c := subscribe(t, udpAddr, protocol.BroadcastFlagXpressNet)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	out := mustRun(t, "--addr", addr, "accessory", "set", "3", "0x12")
+	if want := "accessory 3: value 18 (0x12), sent to 1 client\n"; out != want {
+		t.Fatalf("output = %q, want %q", out, want)
+	}
+	msgs, err := c.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	want := protocol.ExtAccessoryInfo{Address: 3, Value: 0x12, Status: protocol.ExtAccessoryStatusValid}
+	if info, err := protocol.ExtAccessoryInfoFromMessages(msgs); err != nil || info != want {
+		t.Fatalf("LAN_X_EXT_ACCESSORY_INFO = %+v, err=%v; want %+v", info, err, want)
+	}
+
+	out = mustRun(t, "--addr", addr, "-o", "json", "accessory", "set", "0x10", "0")
+	var res struct {
+		Address    uint16 `json:"address"`
+		Value      byte   `json:"value"`
+		Recipients int    `json:"recipients"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("json output %q: %v", out, err)
+	}
+	if res.Address != 16 || res.Value != 0 || res.Recipients != 1 {
+		t.Fatalf("json output = %+v, want accessory 16, value 0, 1 recipient", res)
+	}
+}
+
 func TestSystemBroadcast(t *testing.T) {
 	udpAddr, addr := startSimulator(t)
 	subscribe(t, udpAddr, protocol.BroadcastFlagSystemState)
@@ -375,6 +451,15 @@ func TestErrors(t *testing.T) {
 		{name: "loco set function out of range", args: []string{"loco", "set", "3", "-f", "32=on"}, wantErr: "invalid --function \"32=on\""},
 		{name: "loco set function without state", args: []string{"loco", "set", "3", "-f", "1"}, wantErr: "invalid --function \"1\""},
 		{name: "loco set function invalid state", args: []string{"loco", "set", "3", "-f", "1=toggle"}, wantErr: "invalid --function"},
+		{name: "turnout set without output", args: []string{"turnout", "set", "0"}, wantErr: "accepts 2 arg"},
+		{name: "turnout set ADDR too large", args: []string{"turnout", "set", "2048", "1"}, wantErr: "invalid ADDR \"2048\""},
+		{name: "turnout set ADDR not a number", args: []string{"turnout", "set", "west", "1"}, wantErr: "invalid ADDR \"west\""},
+		{name: "turnout set output 0", args: []string{"turnout", "set", "0", "0"}, wantErr: "invalid output \"0\""},
+		{name: "turnout set output 3", args: []string{"turnout", "set", "0", "3"}, wantErr: "invalid output \"3\""},
+		{name: "accessory set without VALUE", args: []string{"accessory", "set", "3"}, wantErr: "accepts 2 arg"},
+		{name: "accessory set ADDR too large", args: []string{"accessory", "set", "0x800", "1"}, wantErr: "invalid ADDR \"0x800\""},
+		{name: "accessory set VALUE too large", args: []string{"accessory", "set", "3", "256"}, wantErr: "invalid VALUE \"256\""},
+		{name: "accessory set VALUE not a number", args: []string{"accessory", "set", "3", "red"}, wantErr: "invalid VALUE"},
 		{name: "unreachable simulator", args: []string{"--addr", "127.0.0.1:1", "--timeout", "200ms", "power", "on"}, wantErr: "set track power"},
 	}
 	for _, tt := range tests {
@@ -407,6 +492,11 @@ func TestCompletion(t *testing.T) {
 		{name: "loco ADDR", args: []string{"loco", "set", ""}},
 		{name: "speed steps", args: []string{"loco", "set", "3", "--steps", ""}, want: []string{"14", "28", "128"}},
 		{name: "function flag", args: []string{"loco", "set", "3", "-f", ""}},
+		{name: "turnout ADDR", args: []string{"turnout", "set", ""}},
+		{name: "turnout output", args: []string{"turnout", "set", "0", ""}, want: []string{"1", "2"}},
+		{name: "turnout after output", args: []string{"turnout", "set", "0", "1", ""}},
+		{name: "accessory ADDR", args: []string{"accessory", "set", ""}},
+		{name: "accessory VALUE", args: []string{"accessory", "set", "3", ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

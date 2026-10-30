@@ -54,6 +54,63 @@ service SimulatorService {
   // fields that are set change. If the loco changed, the clients subscribed
   // to it get LAN_X_LOCO_INFO.
   rpc SetLoco(SetLocoRequest) returns (SetLocoResponse);
+
+  // SetTurnout switches a turnout as a throttle outside the Z21 LAN would.
+  // X-Bus subscribers get LAN_X_TURNOUT_INFO, also when the position stays
+  // the same, as a real Z21 confirms every switch command.
+  rpc SetTurnout(SetTurnoutRequest) returns (SetTurnoutResponse);
+
+  // SetExtAccessory sets an extended accessory decoder as a throttle outside
+  // the Z21 LAN would. X-Bus subscribers get LAN_X_EXT_ACCESSORY_INFO, also
+  // when the value stays the same.
+  rpc SetExtAccessory(SetExtAccessoryRequest) returns (SetExtAccessoryResponse);
+}
+
+// TurnoutPosition is the output a turnout was last switched to.
+enum TurnoutPosition {
+  // Not switched since the simulator started; invalid in SetTurnoutRequest.
+  TURNOUT_POSITION_UNSPECIFIED = 0;
+  TURNOUT_POSITION_OUTPUT_1 = 1;
+  TURNOUT_POSITION_OUTPUT_2 = 2;
+}
+
+message SetTurnoutRequest {
+  // Turnout address as on the wire (FAdr), 0–2047: 0 is the first turnout.
+  uint32 address = 1;
+  // Output to activate.
+  TurnoutPosition position = 2;
+}
+
+message SetTurnoutResponse {
+  // The turnout after the change.
+  Turnout turnout = 1;
+  int32 recipient_count = 2;
+}
+
+// Turnout is the state of a turnout, as reported in LAN_X_TURNOUT_INFO.
+message Turnout {
+  uint32 address = 1;
+  TurnoutPosition position = 2;
+}
+
+message SetExtAccessoryRequest {
+  // Accessory address as on the wire, 0–2047.
+  uint32 address = 1;
+  // Value sent to the decoder, 0–255 (spec §5.4).
+  uint32 value = 2;
+}
+
+message SetExtAccessoryResponse {
+  // The accessory after the change.
+  ExtAccessory accessory = 1;
+  int32 recipient_count = 2;
+}
+
+// ExtAccessory is the state of an extended accessory decoder, as reported in
+// LAN_X_EXT_ACCESSORY_INFO.
+message ExtAccessory {
+  uint32 address = 1;
+  uint32 value = 2;
 }
 
 // LocoSpeedSteps is the speed step mode of a loco.

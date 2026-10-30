@@ -64,6 +64,8 @@ func NewRootCmd() *cobra.Command {
 		newSystemCmd(a),
 		newCANCmd(a),
 		newLocoCmd(a),
+		newTurnoutCmd(a),
+		newAccessoryCmd(a),
 		newClientsCmd(a),
 	)
 	disableFileCompletion(root)

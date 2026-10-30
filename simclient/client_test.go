@@ -414,6 +414,102 @@ func TestSetLocoInvalid(t *testing.T) {
 	}
 }
 
+func TestSetTurnout(t *testing.T) {
+	f := newFixture(t)
+	ctx := testContext(t)
+	lan := f.lanClient(t, protocol.BroadcastFlagXpressNet)
+
+	tests := []struct {
+		pos  simclient.TurnoutPosition
+		want protocol.TurnoutPosition
+	}{
+		{pos: simclient.TurnoutOutput2, want: protocol.TurnoutPositionOutput2},
+		{pos: simclient.TurnoutOutput1, want: protocol.TurnoutPositionOutput1},
+		{pos: simclient.TurnoutOutput1, want: protocol.TurnoutPositionOutput1},
+	}
+	for _, tt := range tests {
+		turnout, recipients, err := f.sim.SetTurnout(ctx, 7, tt.pos)
+		if err != nil {
+			t.Fatalf("SetTurnout(7, %d): %v", tt.pos, err)
+		}
+		if want := (simclient.Turnout{Address: 7, Position: tt.pos}); turnout != want || recipients != 1 {
+			t.Fatalf("SetTurnout(7, %d) = %+v, %d; want %+v, 1 recipient", tt.pos, turnout, recipients, want)
+		}
+
+		msgs, err := lan.ReadPacket(ctx)
+		if err != nil {
+			t.Fatalf("ReadPacket: %v", err)
+		}
+		want := protocol.TurnoutInfo{Address: 7, Position: tt.want}
+		if info, err := protocol.TurnoutInfoFromMessages(msgs); err != nil || info != want {
+			t.Fatalf("LAN_X_TURNOUT_INFO = %+v, err=%v; want %+v", info, err, want)
+		}
+	}
+
+	msgs, err := lan.Call(ctx, protocol.GetTurnoutInfo(7))
+	if err != nil {
+		t.Fatalf("GetTurnoutInfo: %v", err)
+	}
+	want := protocol.TurnoutInfo{Address: 7, Position: protocol.TurnoutPositionOutput1}
+	if info, err := protocol.TurnoutInfoFromMessages(msgs); err != nil || info != want {
+		t.Fatalf("GetTurnoutInfo = %+v, err=%v; want %+v", info, err, want)
+	}
+}
+
+func TestSetTurnoutInvalid(t *testing.T) {
+	f := newFixture(t)
+	ctx := testContext(t)
+
+	_, _, err := f.sim.SetTurnout(ctx, 7, 42)
+	if err == nil || !strings.Contains(err.Error(), "unknown position 42") {
+		t.Fatalf("SetTurnout(position 42) error = %v, want unknown position", err)
+	}
+
+	for name, call := range map[string]func() error{
+		"not switched": func() error { _, _, err := f.sim.SetTurnout(ctx, 7, simclient.TurnoutNotSwitched); return err },
+		"address 2048": func() error { _, _, err := f.sim.SetTurnout(ctx, 2048, simclient.TurnoutOutput1); return err },
+	} {
+		err := call()
+		if err == nil || !strings.HasPrefix(err.Error(), "simclient: set turnout: ") {
+			t.Fatalf("%s: error = %v, want it prefixed with the operation", name, err)
+		}
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("%s: status code = %v, want InvalidArgument", name, status.Code(err))
+		}
+	}
+}
+
+func TestSetExtAccessory(t *testing.T) {
+	f := newFixture(t)
+	ctx := testContext(t)
+	lan := f.lanClient(t, protocol.BroadcastFlagXpressNet)
+
+	accessory, recipients, err := f.sim.SetExtAccessory(ctx, 7, 0x12)
+	if err != nil {
+		t.Fatalf("SetExtAccessory: %v", err)
+	}
+	if want := (simclient.ExtAccessory{Address: 7, Value: 0x12}); accessory != want || recipients != 1 {
+		t.Fatalf("SetExtAccessory = %+v, %d; want %+v, 1 recipient", accessory, recipients, want)
+	}
+
+	msgs, err := lan.ReadPacket(ctx)
+	if err != nil {
+		t.Fatalf("ReadPacket: %v", err)
+	}
+	want := protocol.ExtAccessoryInfo{Address: 7, Value: 0x12, Status: protocol.ExtAccessoryStatusValid}
+	if info, err := protocol.ExtAccessoryInfoFromMessages(msgs); err != nil || info != want {
+		t.Fatalf("LAN_X_EXT_ACCESSORY_INFO = %+v, err=%v; want %+v", info, err, want)
+	}
+
+	_, _, err = f.sim.SetExtAccessory(ctx, 2048, 1)
+	if err == nil || !strings.HasPrefix(err.Error(), "simclient: set ext accessory: ") {
+		t.Fatalf("SetExtAccessory(2048) error = %v, want it prefixed with the operation", err)
+	}
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("SetExtAccessory(2048) status code = %v, want InvalidArgument", status.Code(err))
+	}
+}
+
 func canDeviceName(t *testing.T, f fixture, netID uint16) string {
 	t.Helper()
 	c := f.lanClient(t, 0)

@@ -222,6 +222,63 @@ func (g *Server) SetLoco(_ context.Context, req *simctlv1.SetLocoRequest) (*simc
 	}, nil
 }
 
+func (g *Server) SetTurnout(_ context.Context, req *simctlv1.SetTurnoutRequest) (*simctlv1.SetTurnoutResponse, error) {
+	var pos protocol.TurnoutPosition
+	switch req.GetPosition() {
+	case simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_1:
+		pos = protocol.TurnoutPositionOutput1
+	case simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_2:
+		pos = protocol.TurnoutPositionOutput2
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "position %s, want output 1 or 2", req.GetPosition())
+	}
+	if req.GetAddress() > math.MaxUint16 {
+		return nil, status.Errorf(codes.InvalidArgument, "address %d out of range [0, %d]", req.GetAddress(), sim.MaxAccessoryAddress)
+	}
+	info, count, err := g.sim.SetTurnout(uint16(req.GetAddress()), pos)
+	if errors.Is(err, sim.ErrInvalidAccessory) {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &simctlv1.SetTurnoutResponse{
+		Turnout:        turnoutToProto(info),
+		RecipientCount: int32(count),
+	}, nil
+}
+
+func turnoutToProto(info protocol.TurnoutInfo) *simctlv1.Turnout {
+	t := &simctlv1.Turnout{Address: uint32(info.Address)}
+	switch info.Position {
+	case protocol.TurnoutPositionOutput1:
+		t.Position = simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_1
+	case protocol.TurnoutPositionOutput2:
+		t.Position = simctlv1.TurnoutPosition_TURNOUT_POSITION_OUTPUT_2
+	}
+	return t
+}
+
+func (g *Server) SetExtAccessory(_ context.Context, req *simctlv1.SetExtAccessoryRequest) (*simctlv1.SetExtAccessoryResponse, error) {
+	if req.GetAddress() > math.MaxUint16 {
+		return nil, status.Errorf(codes.InvalidArgument, "address %d out of range [0, %d]", req.GetAddress(), sim.MaxAccessoryAddress)
+	}
+	if req.GetValue() > math.MaxUint8 {
+		return nil, status.Errorf(codes.InvalidArgument, "value %d out of range [0, %d]", req.GetValue(), math.MaxUint8)
+	}
+	info, count, err := g.sim.SetExtAccessory(uint16(req.GetAddress()), byte(req.GetValue()))
+	if errors.Is(err, sim.ErrInvalidAccessory) {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &simctlv1.SetExtAccessoryResponse{
+		Accessory:      &simctlv1.ExtAccessory{Address: uint32(info.Address), Value: uint32(info.Value)},
+		RecipientCount: int32(count),
+	}, nil
+}
+
 func locoChangeFromProto(req *simctlv1.SetLocoRequest) (sim.LocoChange, error) {
 	var c sim.LocoChange
 	if req.SpeedSteps != nil {

@@ -160,6 +160,17 @@ Drive a loco as a throttle outside the Z21 LAN would; values not given stay unch
 
 `LAN_X_LOCO_INFO` goes to clients that asked for the loco with `LAN_X_GET_LOCO_INFO` and subscribe to `XPRESSNET_UPDATES`, and to clients subscribed to `ALL_LOCO_INFO_UPDATES`.
 
+### Turnouts and accessories
+
+Switch a turnout to output 1 or 2, or send a value (0–255, for example a signal aspect) to an extended accessory decoder, as a throttle outside the Z21 LAN would. Addresses are as on the wire (0–2047; 0 is turnout 1 in the Z21 app) and accept decimal or `0x` hex.
+
+```bash
+./bin/z21-sim-ctl turnout set 0 2
+./bin/z21-sim-ctl accessory set 3 0x12
+```
+
+Clients subscribed to `XPRESSNET_UPDATES` get `LAN_X_TURNOUT_INFO` or `LAN_X_EXT_ACCESSORY_INFO` after every command, also when nothing changes, as a real Z21 confirms each switch command.
+
 ### Clients
 
 List the LAN clients with an active session, their broadcast flags and subscribed locos:

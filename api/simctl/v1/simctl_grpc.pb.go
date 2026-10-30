@@ -28,6 +28,8 @@ const (
 	SimulatorService_EmergencyStop_FullMethodName           = "/trains.io.z21.simctl.v1.SimulatorService/EmergencyStop"
 	SimulatorService_ShortCircuit_FullMethodName            = "/trains.io.z21.simctl.v1.SimulatorService/ShortCircuit"
 	SimulatorService_SetLoco_FullMethodName                 = "/trains.io.z21.simctl.v1.SimulatorService/SetLoco"
+	SimulatorService_SetTurnout_FullMethodName              = "/trains.io.z21.simctl.v1.SimulatorService/SetTurnout"
+	SimulatorService_SetExtAccessory_FullMethodName         = "/trains.io.z21.simctl.v1.SimulatorService/SetExtAccessory"
 )
 
 // SimulatorServiceClient is the client API for SimulatorService service.
@@ -74,6 +76,14 @@ type SimulatorServiceClient interface {
 	// fields that are set change. If the loco changed, the clients subscribed
 	// to it get LAN_X_LOCO_INFO.
 	SetLoco(ctx context.Context, in *SetLocoRequest, opts ...grpc.CallOption) (*SetLocoResponse, error)
+	// SetTurnout switches a turnout as a throttle outside the Z21 LAN would.
+	// X-Bus subscribers get LAN_X_TURNOUT_INFO, also when the position stays
+	// the same, as a real Z21 confirms every switch command.
+	SetTurnout(ctx context.Context, in *SetTurnoutRequest, opts ...grpc.CallOption) (*SetTurnoutResponse, error)
+	// SetExtAccessory sets an extended accessory decoder as a throttle outside
+	// the Z21 LAN would. X-Bus subscribers get LAN_X_EXT_ACCESSORY_INFO, also
+	// when the value stays the same.
+	SetExtAccessory(ctx context.Context, in *SetExtAccessoryRequest, opts ...grpc.CallOption) (*SetExtAccessoryResponse, error)
 }
 
 type simulatorServiceClient struct {
@@ -174,6 +184,26 @@ func (c *simulatorServiceClient) SetLoco(ctx context.Context, in *SetLocoRequest
 	return out, nil
 }
 
+func (c *simulatorServiceClient) SetTurnout(ctx context.Context, in *SetTurnoutRequest, opts ...grpc.CallOption) (*SetTurnoutResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetTurnoutResponse)
+	err := c.cc.Invoke(ctx, SimulatorService_SetTurnout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *simulatorServiceClient) SetExtAccessory(ctx context.Context, in *SetExtAccessoryRequest, opts ...grpc.CallOption) (*SetExtAccessoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetExtAccessoryResponse)
+	err := c.cc.Invoke(ctx, SimulatorService_SetExtAccessory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SimulatorServiceServer is the server API for SimulatorService service.
 // All implementations must embed UnimplementedSimulatorServiceServer
 // for forward compatibility.
@@ -218,6 +248,14 @@ type SimulatorServiceServer interface {
 	// fields that are set change. If the loco changed, the clients subscribed
 	// to it get LAN_X_LOCO_INFO.
 	SetLoco(context.Context, *SetLocoRequest) (*SetLocoResponse, error)
+	// SetTurnout switches a turnout as a throttle outside the Z21 LAN would.
+	// X-Bus subscribers get LAN_X_TURNOUT_INFO, also when the position stays
+	// the same, as a real Z21 confirms every switch command.
+	SetTurnout(context.Context, *SetTurnoutRequest) (*SetTurnoutResponse, error)
+	// SetExtAccessory sets an extended accessory decoder as a throttle outside
+	// the Z21 LAN would. X-Bus subscribers get LAN_X_EXT_ACCESSORY_INFO, also
+	// when the value stays the same.
+	SetExtAccessory(context.Context, *SetExtAccessoryRequest) (*SetExtAccessoryResponse, error)
 	mustEmbedUnimplementedSimulatorServiceServer()
 }
 
@@ -254,6 +292,12 @@ func (UnimplementedSimulatorServiceServer) ShortCircuit(context.Context, *ShortC
 }
 func (UnimplementedSimulatorServiceServer) SetLoco(context.Context, *SetLocoRequest) (*SetLocoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetLoco not implemented")
+}
+func (UnimplementedSimulatorServiceServer) SetTurnout(context.Context, *SetTurnoutRequest) (*SetTurnoutResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetTurnout not implemented")
+}
+func (UnimplementedSimulatorServiceServer) SetExtAccessory(context.Context, *SetExtAccessoryRequest) (*SetExtAccessoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetExtAccessory not implemented")
 }
 func (UnimplementedSimulatorServiceServer) mustEmbedUnimplementedSimulatorServiceServer() {}
 func (UnimplementedSimulatorServiceServer) testEmbeddedByValue()                          {}
@@ -438,6 +482,42 @@ func _SimulatorService_SetLoco_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SimulatorService_SetTurnout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetTurnoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SimulatorServiceServer).SetTurnout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SimulatorService_SetTurnout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SimulatorServiceServer).SetTurnout(ctx, req.(*SetTurnoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SimulatorService_SetExtAccessory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetExtAccessoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SimulatorServiceServer).SetExtAccessory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SimulatorService_SetExtAccessory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SimulatorServiceServer).SetExtAccessory(ctx, req.(*SetExtAccessoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SimulatorService_ServiceDesc is the grpc.ServiceDesc for SimulatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -480,6 +560,14 @@ var SimulatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetLoco",
 			Handler:    _SimulatorService_SetLoco_Handler,
+		},
+		{
+			MethodName: "SetTurnout",
+			Handler:    _SimulatorService_SetTurnout_Handler,
+		},
+		{
+			MethodName: "SetExtAccessory",
+			Handler:    _SimulatorService_SetExtAccessory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

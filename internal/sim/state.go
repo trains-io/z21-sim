@@ -32,6 +32,10 @@ type State struct {
 	system     protocol.SystemState
 	canDevices map[uint16]CANDevice
 	locos      map[uint16]protocol.LocoInfo // locos driven so far, by address
+	// turnouts and extAccessories hold what has been switched so far, by
+	// address.
+	turnouts       map[uint16]protocol.TurnoutPosition
+	extAccessories map[uint16]byte
 }
 
 // NewState returns the state of a command station that has just been powered
@@ -53,6 +57,9 @@ func newState(capabilities byte) *State {
 		},
 		canDevices: make(map[uint16]CANDevice),
 		locos:      make(map[uint16]protocol.LocoInfo),
+
+		turnouts:       make(map[uint16]protocol.TurnoutPosition),
+		extAccessories: make(map[uint16]byte),
 	}
 }
 

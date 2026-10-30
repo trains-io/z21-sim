@@ -124,6 +124,11 @@ func (s *Server) mux() *server.Mux {
 	m.HandleLANXDB0(xHeaderSetLocoBinary, xCommandSetLocoBinary, locoBinaryStateHandler())
 	m.HandleLANX(xHeaderSetLocoEStop, s.locoEStopHandler())
 
+	m.HandleLANX(xHeaderGetTurnoutInfo, s.turnoutInfoHandler())
+	m.HandleLANX(xHeaderSetTurnout, s.setTurnoutHandler())
+	m.HandleLANX(xHeaderGetExtAccessory, s.extAccessoryInfoHandler())
+	m.HandleLANX(xHeaderSetExtAccessory, s.setExtAccessoryHandler())
+
 	for _, header := range []uint16{
 		protocol.HeaderLANCANDeviceGetDescription,
 		protocol.HeaderLANCANDeviceSetDescription,
